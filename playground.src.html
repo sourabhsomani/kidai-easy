@@ -106,6 +106,14 @@ main {
   outline: none; -webkit-text-fill-color: transparent;
 }
 .code-wrap textarea::selection { background: rgba(47,109,246,.22); -webkit-text-fill-color: transparent; }
+/* autocomplete */
+#ac-pop { position: fixed; z-index: 9999; background: #fff; border: 1.5px solid #c5d0e8; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.14); overflow: hidden; min-width: 260px; max-width: 420px; display: none; }
+#ac-pop.ac-show { display: block; }
+#ac-pop ul { margin: 0; padding: 4px 0; list-style: none; max-height: 260px; overflow-y: auto; }
+#ac-pop li { padding: 6px 14px; cursor: pointer; display: flex; align-items: baseline; gap: 10px; }
+#ac-pop li:hover, #ac-pop li.ac-sel { background: #e8f0fe; }
+#ac-pop li b { font-family: var(--mono); font-size: 13.5px; color: #1a237e; white-space: nowrap; flex-shrink: 0; }
+#ac-pop li span { font-size: 12px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .code-wrap pre .ln-bad { background: #fde4e4; display: inline-block; min-width: 100%; }
 .tk-cmd { color: var(--sky); font-weight: 700; }
 .tk-blk { color: var(--grape); font-weight: 700; }
@@ -379,6 +387,7 @@ footer { text-align: center; font-size: 13px; color: var(--ink-soft); padding: 0
       <div class="code-wrap">
         <pre id="hl" aria-hidden="true"></pre>
         <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Type your KidAI program here" aria-describedby="status"></textarea>
+        <div id="ac-pop" role="combobox" aria-expanded="false"><ul id="ac-list" role="listbox"></ul></div>
       </div>
     </div>
     <div class="typebar auto" id="typebar" role="toolbar" aria-label="Typing keys">
@@ -1083,9 +1092,230 @@ say "Done!"
   }
   $('openShared').addEventListener('click', () => openShared($('pasteCode').value));
 
-  code.addEventListener('input', () => { badLine = 0; sync(); save(); });
+  // ── IntelliSense autocomplete ────────────────────────────────────────────
+  const AC = [
+    ['say','say "§"','Show text or a value on screen'],
+    ['ask','ask "§?" into name','Ask the user a question and save the answer'],
+    ['set','set § to ','Create or update a variable'],
+    ['change','change § by 1','Add to a number variable'],
+    ['if','if §:\n  \nend','Do something only when a condition is true'],
+    ['else if','else if §:','Another condition branch inside an if'],
+    ['else','else:','What to do when no condition matched'],
+    ['end','end','Close an if, repeat or define block'],
+    ['repeat forever','repeat forever:\n  §\nend','Keep looping until Stop is pressed'],
+    ['repeat until','repeat until §:\n  \nend','Keep looping until a condition is true'],
+    ['repeat while','repeat while §:\n  \nend','Keep looping while a condition is true'],
+    ['repeat','repeat § times:\n  \nend','Do something a set number of times'],
+    ['for each','for each § in list:\n  \nend','Do something for every item in a list'],
+    ['stop everything','stop everything','End the whole program immediately'],
+    ['stop','stop','Jump out of the current loop'],
+    ['skip','skip','Skip to the next loop iteration'],
+    ['define','define §():\n  \nend','Make your own instruction (recipe)'],
+    ['give back','give back §','Return a value from a recipe'],
+    ['use','use "§"','Borrow recipes from another project'],
+    ['wait','wait §','Pause for a number of seconds'],
+    ['forward','forward §','Move Sparky forward'],
+    ['back','back §','Move Sparky backward'],
+    ['turn right','turn right §','Turn Sparky clockwise by degrees'],
+    ['turn left','turn left §','Turn Sparky counter-clockwise'],
+    ['turn to','turn to §','Point Sparky in a direction (0 = up)'],
+    ['pen up','pen up','Lift the pen — move without drawing'],
+    ['pen down','pen down','Put the pen down to draw again'],
+    ['pen size','pen size §','Set pen thickness in pixels'],
+    ['color','color "§"','Set the drawing colour'],
+    ['circle','circle §','Draw a circle with this radius'],
+    ['dot','dot §','Draw a filled dot'],
+    ['rectangle','rectangle §, ','Draw a rectangle — width, height'],
+    ['write','write "§"','Write text on the stage'],
+    ['background','background "§"','Set the stage background colour'],
+    ['go to','go to §, ','Move Sparky to a position (x, y)'],
+    ['go home','go home','Move Sparky back to the centre'],
+    ['clear','clear','Wipe the stage clean'],
+    ['hide','hide','Hide Sparky'],
+    ['show','show','Show Sparky again'],
+    ['teach','teach "§" with ["example"]','Give the AI labelled training examples'],
+    ['test','test "§" with ["example"]','Check how well the AI learned a label'],
+    ['guess','guess "§"','Ask the text AI to classify something'],
+    ['how sure','how sure','AI confidence percentage (0–100)'],
+    ['how accurate','how accurate','AI test accuracy percentage (0–100)'],
+    ['learn','learn "§" from [[1, 2], [2, 4]]','Teach the number AI with input/output pairs'],
+    ['predict','predict "§" for ','Get a number prediction from the AI'],
+    ['chat','chat "§"','Ask a cloud AI — needs a gateway'],
+    ['ask picture','ask picture "§" into pic','Show a drawing pad and save the picture'],
+    ['stage picture','stage picture',"A picture of what Sparky's drawn"],
+    ['save ai','save ai as "§"','Save what the AI has learned'],
+    ['load ai','load ai "§"','Load previously saved AI training data'],
+    ['forget ai','forget ai','Reset all AI training data'],
+    ['save','save § as "§"','Save a value so it persists next time'],
+    ['load','load "§" into ','Load a previously saved value'],
+    ['make sprite','make sprite "§" as "🐱" at 0, 0 size 60','Create a sprite character on the stage'],
+    ['move sprite','move sprite "§" by 10, 0','Move a sprite by x and y steps'],
+    ['hide sprite','hide sprite "§"','Hide a sprite from the stage'],
+    ['show sprite','show sprite "§"','Show a hidden sprite'],
+    ['delete sprite','delete sprite "§"','Remove a sprite from the stage'],
+    ['when key','when key "space" pressed:\n  §\nend','Run a block when a keyboard key is pressed'],
+    ['when clicked','when clicked "§":\n  \nend','Create a button and run a block on click'],
+    ['every','every § second:\n  \nend','Run a block on a repeating timer'],
+    ['play note','play note "§" for 0.5 seconds','Play a musical note (A–G, like "C" or "F#5")'],
+    ['play sound','play sound "§"','Play a sound effect (coin, jump, boom…)'],
+    ['beep','beep','Play a short beep sound'],
+    ['add','add § to list','Add an item to a list'],
+    ['remove','remove § from list','Remove an item from a list'],
+    ['random item','random item from §','Pick a random item from a list'],
+    ['random','random § to ','Pick a random number in a range'],
+    ['item','item § of list','Get a list item by position (starts at 1)'],
+    ['length of','length of §','How many items in a list or characters in text'],
+    ['keys of','keys of §','Get all field names from a record'],
+    ['split','split § by ","','Split text into a list'],
+    ['join','join § with ", "','Join a list into a single piece of text'],
+    ['replace','replace "§" with "" in text','Replace part of some text'],
+    ['starts with','§ starts with "§"','Check if text starts with something'],
+    ['ends with','§ ends with "§"','Check if text ends with something'],
+    ['contains','§ contains ','Check if a list or text contains something'],
+    ['is bigger than','§ is bigger than ','Greater-than comparison'],
+    ['is smaller than','§ is smaller than ','Less-than comparison'],
+    ['is not','§ is not ','Not-equal comparison'],
+    ['is','§ is ','Equal comparison (works for text too)'],
+    ['and','§ and ','Both conditions must be true'],
+    ['or','§ or ','At least one condition must be true'],
+    ['not','not §','Flip a yes/no value'],
+    ['round','round(§)','Round a number to the nearest whole'],
+    ['sqrt','sqrt(§)','Square root of a number'],
+    ['abs','abs(§)','Absolute value — always positive'],
+    ['number','number(§)','Convert text to a number'],
+    ['text','text(§)','Convert any value to text'],
+    ['uppercase','uppercase(§)','Convert text to UPPERCASE'],
+    ['lowercase','lowercase(§)','Convert text to lowercase'],
+    ['x position','x position',"Sparky's current X coordinate"],
+    ['y position','y position',"Sparky's current Y coordinate"],
+    ['direction','direction',"Sparky's current facing direction (0 = up)"],
+    ['yes','yes','The value true'],
+    ['no','no','The value false'],
+    ['nothing','nothing','An empty or missing value'],
+  ];
+
+  // mirror div — lets us measure pixel position of the cursor in the textarea
+  const acMirror = document.createElement('div');
+  Object.assign(acMirror.style, {
+    position: 'fixed', top: '-9999px', left: '-9999px', visibility: 'hidden',
+    whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflow: 'auto'
+  });
+  document.body.appendChild(acMirror);
+
+  const acPop = $('ac-pop'), acList = $('ac-list');
+  let acItems = [], acIdx = -1;
+
+  function acSyncMirror() {
+    const cs = getComputedStyle(code);
+    ['font','fontSize','fontFamily','lineHeight','letterSpacing','padding',
+     'paddingTop','paddingRight','paddingBottom','paddingLeft','border',
+     'borderTop','borderRight','borderBottom','borderLeft','boxSizing','width','tabSize']
+      .forEach(p => acMirror.style[p] = cs[p]);
+  }
+
+  function acCursorPos() {
+    acSyncMirror();
+    const s = code.selectionStart, v = code.value;
+    const before = v.slice(0, s);
+    acMirror.textContent = before;
+    const span = document.createElement('span');
+    span.textContent = '|';
+    acMirror.appendChild(span);
+    const mr = acMirror.getBoundingClientRect();
+    const cr = code.getBoundingClientRect();
+    const sr = span.getBoundingClientRect();
+    // offset by textarea scroll
+    const x = cr.left + (sr.left - mr.left) - code.scrollLeft;
+    const y = cr.top  + (sr.top  - mr.top)  - code.scrollTop + parseFloat(getComputedStyle(code).lineHeight);
+    acMirror.removeChild(span);
+    return { x, y };
+  }
+
+  function acPrefix() {
+    const s = code.selectionStart, v = code.value;
+    const lineStart = v.lastIndexOf('\n', s - 1) + 1;
+    return v.slice(lineStart, s).replace(/^\s+/, '').toLowerCase();
+  }
+
+  function acShow(items, prefix) {
+    acItems = items; acIdx = 0;
+    acList.innerHTML = '';
+    items.forEach((item, i) => {
+      const li = document.createElement('li');
+      li.setAttribute('role', 'option');
+      li.innerHTML = '<b>' + item[0].replace(new RegExp('^(' + prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') + '</b><span>' + item[2] + '</span>';
+      li.addEventListener('mousedown', (e) => { e.preventDefault(); acAccept(i); });
+      li.addEventListener('mousemove', () => { acIdx = i; acHighlight(); });
+      acList.appendChild(li);
+    });
+    acHighlight();
+    const { x, y } = acCursorPos();
+    const vpW = window.innerWidth, vpH = window.innerHeight;
+    const popW = 420, popH = Math.min(items.length * 34 + 8, 260);
+    acPop.style.left = Math.min(x, vpW - popW - 8) + 'px';
+    acPop.style.top  = (y + popH > vpH ? y - popH - parseFloat(getComputedStyle(code).lineHeight) - 4 : y) + 'px';
+    acPop.classList.add('ac-show');
+    acPop.setAttribute('aria-expanded', 'true');
+  }
+
+  function acHide() {
+    acPop.classList.remove('ac-show');
+    acPop.setAttribute('aria-expanded', 'false');
+    acItems = []; acIdx = -1;
+  }
+
+  function acHighlight() {
+    [...acList.children].forEach((li, i) => li.classList.toggle('ac-sel', i === acIdx));
+    if (acIdx >= 0) acList.children[acIdx]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function acAccept(idx) {
+    const item = acItems[idx ?? acIdx];
+    if (!item) return;
+    const s = code.selectionStart, v = code.value;
+    const lineStart = v.lastIndexOf('\n', s - 1) + 1;
+    const linePrefix = v.slice(lineStart, s);
+    const indent = (linePrefix.match(/^\s*/) || [''])[0];
+    const typed = linePrefix.replace(/^\s+/, '');
+    // build snippet: replace leading part of snippet that matches what's typed
+    let snippet = item[1];
+    // indent multi-line snippets to match current indentation
+    snippet = snippet.replace(/\n/g, '\n' + indent);
+    // find cursor placeholder §
+    const cur = snippet.indexOf('§');
+    const final = cur >= 0 ? snippet.replace('§', '') : snippet;
+    // replace typed prefix with snippet
+    const before = v.slice(0, lineStart + indent.length);
+    const after  = v.slice(s);
+    const newVal = before + final + after;
+    const newCur = (before + (cur >= 0 ? snippet.slice(0, cur) : final)).length;
+    code.value = newVal;
+    code.selectionStart = code.selectionEnd = newCur;
+    badLine = 0; sync(); save();
+    acHide();
+    code.focus();
+  }
+
+  function acUpdate() {
+    const prefix = acPrefix();
+    if (prefix.length < 1) { acHide(); return; }
+    const matches = AC.filter(([kw]) => kw.toLowerCase().startsWith(prefix));
+    if (matches.length === 0) { acHide(); return; }
+    acShow(matches.slice(0, 10), prefix);
+  }
+
+  code.addEventListener('input', () => { badLine = 0; sync(); save(); acUpdate(); });
   code.addEventListener('scroll', syncScroll);
+  code.addEventListener('blur', () => setTimeout(acHide, 150));
   code.addEventListener('keydown', (e) => {
+    // autocomplete navigation takes priority
+    if (acPop.classList.contains('ac-show')) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx + 1, acItems.length - 1); acHighlight(); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); acIdx = Math.max(acIdx - 1, 0); acHighlight(); return; }
+      if (e.key === 'Escape')    { e.preventDefault(); acHide(); return; }
+      if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); acAccept(); return; }
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); acAccept(); return; }
+    }
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); return; }
     if (e.key === 'F10') { e.preventDefault(); $('step').click(); return; }
     if (e.key === 'Tab' && !e.shiftKey) {
