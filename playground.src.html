@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KidAI Easy Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: code notebook on the left, robot stage + talk log on the right, word book underneath. */
+  --ink: #17224a;
+  --ink-soft: #55608a;
+  --paper: #eaf0f8;
+  --card: #ffffff;
+  --line: #d3dcec;
+  --sky: #2f6df6;
+  --sun: #ffb703;
+  --mint: #12a26a;
+  --coral: #e5484d;
+  --grape: #7a4fd6;
+  --pink: #d6338a;
+  --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.45;
+}
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+
+header {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;
+  padding: 12px 20px;
+  background: var(--ink); color: #fff;
+}
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.brand svg { flex: none; }
+.brand h1 { font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1; margin: 0; letter-spacing: .3px; }
+.brand h1 span { color: var(--sun); }
+.brand p { margin: 2px 0 0; font-size: 13px; color: #b9c3e6; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.btn {
+  border: 0; border-radius: 12px; padding: 10px 18px; cursor: pointer;
+  font-family: var(--display); font-weight: 800; font-size: 18px; line-height: 1.1;
+  display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 0 3px 0 rgba(0,0,0,.25);
+  transition: transform .08s;
+}
+.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.25); }
+.btn-run { background: var(--mint); color: #fff; }
+.btn-stop { background: var(--coral); color: #fff; }
+.btn-stop:disabled { opacity: .45; cursor: not-allowed; }
+.btn-ghost { background: #2a3766; color: #fff; box-shadow: none; font-size: 15px; padding: 9px 14px; }
+select.examples {
+  background: #2a3766; border: 0; border-radius: 12px; padding: 10px 12px; color: #fff; font-size: 15px;
+}
+label.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #dbe2f7; cursor: pointer; }
+label.toggle input { width: 18px; height: 18px; accent-color: var(--sun); }
+
+main {
+  display: grid; gap: 16px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr);
+  padding: 16px 20px 8px;
+  max-width: 1400px; margin: 0 auto;
+}
+@media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 14px; border-bottom: 1px solid var(--line);
+  font-family: var(--display); font-weight: 800; font-size: 18px;
+}
+.panel-head small { font-family: var(--body); font-weight: 400; font-size: 13px; color: var(--ink-soft); }
+.status { font-family: var(--body); font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #edf1f8; color: var(--ink-soft); white-space: nowrap; }
+.status[data-s="running"] { background: #dff5ea; color: #0b6c45; }
+.status[data-s="listening"] { background: #fff2cc; color: #7a5300; }
+.status[data-s="error"] { background: #fde4e4; color: #a32025; }
+
+/* editor */
+.editor { position: relative; display: flex; flex: 1; min-height: 520px; font-family: var(--mono); font-size: 16px; line-height: 26px; }
+.gutter {
+  flex: none; width: 46px; padding: 12px 8px 12px 0; text-align: right; color: #9aa6c4;
+  background: #f6f8fc; border-right: 1px solid var(--line); overflow: hidden; user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.gutter div.bad { color: #fff; background: var(--coral); border-radius: 0 6px 6px 0; }
+.code-wrap { position: relative; flex: 1; min-width: 0; }
+.code-wrap pre, .code-wrap textarea {
+  position: absolute; inset: 0; margin: 0; padding: 12px 14px; border: 0;
+  font: inherit; line-height: inherit; white-space: pre; tab-size: 2; overflow: auto;
+}
+.code-wrap pre { pointer-events: none; color: var(--ink); overflow: hidden; }
+.code-wrap textarea {
+  resize: none; background: transparent; color: transparent; caret-color: var(--ink);
+  outline: none; -webkit-text-fill-color: transparent;
+}
+.code-wrap textarea::selection { background: rgba(47,109,246,.22); -webkit-text-fill-color: transparent; }
+.code-wrap pre .ln-bad { background: #fde4e4; display: inline-block; min-width: 100%; }
+.tk-cmd { color: var(--sky); font-weight: 700; }
+.tk-blk { color: var(--grape); font-weight: 700; }
+.tk-ai { color: var(--pink); font-weight: 700; }
+.tk-draw { color: #0f8a8a; font-weight: 700; }
+.tk-op { color: #8a5a00; }
+.tk-str { color: #1b7f3b; }
+.tk-num { color: #c2410c; }
+.tk-com { color: #8a94b0; font-style: italic; }
+
+/* right column */
+.right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.stage-box { padding: 12px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.stage {
+  position: relative; width: 100%; max-width: 400px; aspect-ratio: 1; border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--line);
+  background-color: #fff;
+  background-image: linear-gradient(#eef2f9 1px, transparent 1px), linear-gradient(90deg, #eef2f9 1px, transparent 1px);
+  background-size: 25px 25px; background-position: -0.5px -0.5px;
+}
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.stage-note { font-size: 12px; color: var(--ink-soft); }
+.click-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 0; }
+.click-buttons button {
+  border: 2px solid var(--ink); background: var(--sun); color: var(--ink); border-radius: 999px;
+  padding: 6px 16px; font-family: var(--display); font-weight: 800; font-size: 16px; cursor: pointer;
+  box-shadow: 0 3px 0 var(--ink);
+}
+.stage:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+.keypad { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.keypad[hidden] { display: none; }
+.keys { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.keys button { min-width: 48px; height: 44px; border: 2px solid var(--ink); border-radius: 10px; background: #fff; font-family: var(--display); font-weight: 800; font-size: 16px; cursor: pointer; touch-action: none; user-select: none; }
+.keys button.on { background: var(--sun); }
+.out-note { font-size: 13px; color: var(--grape); }
+.click-buttons button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+
+.output { height: 260px; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.out-say { font-family: var(--mono); font-size: 15px; white-space: pre-wrap; word-break: break-word; padding-left: 10px; border-left: 3px solid var(--sky); }
+.out-muted { font-size: 13px; color: var(--ink-soft); }
+.out-ask { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #f2f6ff; border-radius: 10px; padding: 8px 10px; }
+.out-ask label { font-weight: 700; }
+.out-ask input { flex: 1; min-width: 140px; border: 2px solid var(--sky); border-radius: 8px; padding: 6px 10px; background: #fff; }
+.out-ask button { border: 0; background: var(--sky); color: #fff; border-radius: 8px; padding: 7px 14px; font-weight: 700; cursor: pointer; }
+.out-answer { font-family: var(--mono); font-size: 15px; color: var(--ink-soft); padding-left: 10px; border-left: 3px solid var(--line); }
+.out-error { background: #fff1f1; border: 2px solid var(--coral); border-radius: 12px; padding: 10px 12px; }
+.out-error b { color: #a32025; font-family: var(--display); font-size: 18px; }
+.out-error p { margin: 4px 0 0; }
+.out-error .tip { color: var(--ink); }
+.out-error .tip::before { content: "Tip: "; font-weight: 700; }
+.out-ai { border: 2px solid var(--pink); border-radius: 12px; padding: 10px 12px; background: #fff6fb; }
+.out-ai .ai-top { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.out-ai .ai-top b { font-family: var(--display); font-size: 19px; color: var(--pink); }
+.out-ai .bars { display: grid; grid-template-columns: max-content 1fr 3.2em; gap: 4px 8px; align-items: center; margin: 8px 0 6px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.out-ai .bar { height: 10px; border-radius: 99px; background: #f3d6e6; overflow: hidden; }
+.out-ai .bar i { display: block; height: 100%; background: var(--pink); border-radius: 99px; }
+.out-ai .why { font-size: 13px; color: var(--ink-soft); margin: 0; }
+.out-ai .warn { font-size: 13px; color: #7a5300; background: #fff2cc; border-radius: 8px; padding: 4px 8px; margin: 4px 0 0; }
+
+/* word book */
+.book { max-width: 1400px; margin: 0 auto; padding: 8px 20px 32px; }
+.book h2 { font-family: var(--display); font-weight: 800; font-size: 24px; margin: 8px 0 2px; text-wrap: balance; }
+.book > p { margin: 0 0 12px; color: var(--ink-soft); max-width: 65ch; }
+.cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 6px; border-top: 5px solid var(--c, var(--sky)); }
+.card h3 { margin: 0; font-family: var(--display); font-size: 18px; }
+.card p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+.card pre { margin: 0; background: #f6f8fc; border-radius: 8px; padding: 8px 10px; font-family: var(--mono); font-size: 13.5px; line-height: 1.5; overflow-x: auto; flex: 1; }
+.card button { align-self: flex-start; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--sky); }
+.card button:hover { background: #f2f6ff; }
+.c-game { --c: var(--coral); } .c-talk { --c: var(--sky); } .c-blk { --c: var(--grape); } .c-draw { --c: #0f8a8a; } .c-ai { --c: var(--pink); } .c-list { --c: var(--sun); }
+.btn-step { background: var(--sun); color: var(--ink); }
+select.speed { background: #2a3766; border: 0; border-radius: 12px; padding: 10px 12px; color: #fff; font-size: 15px; }
+.left { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.proj { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; position: relative; }
+.proj input { font-family: var(--display); font-weight: 800; font-size: 18px; border: 1px solid transparent; border-radius: 8px; padding: 2px 6px; width: 13ch; min-width: 6ch; background: transparent; }
+.proj input:hover, .proj input:focus { border-color: var(--line); background: #f6f8fc; }
+.mini { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--sky); }
+.mini:hover { background: #f2f6ff; }
+.mini.on { background: var(--sky); color: #fff; border-color: var(--sky); }
+.pop { position: absolute; top: 100%; left: 0; z-index: 20; margin-top: 6px; width: min(420px, 86vw); background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 30px rgba(23,34,74,.18); padding: 12px; display: flex; flex-direction: column; gap: 10px; font-family: var(--body); font-weight: 400; font-size: 14px; }
+.pop[hidden] { display: none; }
+.pop h4 { margin: 0; font-family: var(--display); font-size: 16px; }
+.pop textarea { width: 100%; min-height: 64px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-family: var(--mono); font-size: 12px; resize: vertical; }
+.pop .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pop .note { color: var(--ink-soft); font-size: 12.5px; margin: 0; }
+.plist { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+.plist li { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.plist li:last-child { border-bottom: 0; }
+.plist li.cur { background: #f2f6ff; }
+.plist li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plist small { color: var(--ink-soft); }
+.memory { padding: 8px 14px 12px; max-height: 260px; overflow-y: auto; }
+.memory table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.memory th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--ink-soft); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.memory td { padding: 4px 6px; border-bottom: 1px solid #eef2f9; vertical-align: top; }
+.memory td.n { font-family: var(--mono); font-weight: 700; white-space: nowrap; }
+.memory td.v { font-family: var(--mono); word-break: break-word; }
+.memory td.k { color: var(--ink-soft); font-size: 12.5px; white-space: nowrap; }
+.memory tr.changed td { background: #fff2cc; }
+.memory .frame { margin-top: 10px; border-left: 4px solid var(--grape); padding-left: 8px; }
+.memory .frame h5 { margin: 0 0 2px; font-size: 13px; color: var(--grape); }
+.memory .empty { color: var(--ink-soft); margin: 6px 0; }
+.code-wrap pre .ln-cur { background: #fff2cc; display: inline-block; min-width: 100%; }
+.gutter div.cur { color: var(--ink); background: var(--sun); border-radius: 0 6px 6px 0; font-weight: 700; }
+.out-ai .reasons { font-size: 13px; margin: 4px 0 0; }
+.out-ai .reasons b { color: var(--pink); }
+.out-ai .pics { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-soft); }
+.out-ai canvas, .out-ai img { width: 48px; height: 48px; border: 1px solid #f3d6e6; border-radius: 6px; background: #fff; image-rendering: pixelated; }
+.out-test { border: 2px solid var(--grape); border-radius: 12px; padding: 10px 12px; background: #f6f2ff; }
+.out-test b { font-family: var(--display); font-size: 18px; color: var(--grape); }
+.out-test ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
+.out-chat { border: 2px solid var(--sky); border-radius: 12px; padding: 10px 12px; background: #f2f6ff; }
+.out-chat .who { font-size: 12.5px; color: var(--ink-soft); margin: 4px 0 0; }
+.pad { display: flex; flex-direction: column; gap: 8px; background: #fff6fb; border: 2px dashed var(--pink); border-radius: 12px; padding: 10px; }
+.pad canvas { width: 200px; height: 200px; background: #fff; border: 1px solid var(--line); border-radius: 8px; touch-action: none; cursor: crosshair; }
+.pad .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pad button, .pad label.mini { border: 0; background: var(--pink); color: #fff; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+.pad button.ghost { background: #fff; color: var(--pink); border: 1px solid var(--pink); }
+.modes { display: flex; gap: 4px; padding: 6px 10px 0; border-bottom: 1px solid var(--line); background: #f6f8fc; }
+.modes button { border: 1px solid var(--line); border-bottom: 0; background: #eef2f9; border-radius: 10px 10px 0 0; padding: 6px 14px; font-weight: 700; font-size: 14px; cursor: pointer; color: var(--ink-soft); margin-bottom: -1px; }
+.modes button[aria-selected="true"] { background: #fff; color: var(--ink); }
+.modes .hint { margin-left: auto; align-self: center; font-size: 12.5px; color: var(--ink-soft); }
+#blocksArea { height: 560px; position: relative; }
+#blocksArea[hidden], #coreView[hidden], .editor[hidden] { display: none; }
+.blocks-msg { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 5; background: #fff1f1; border: 2px solid var(--coral); border-radius: 10px; padding: 8px 10px; font-size: 14px; }
+.blocks-msg[hidden] { display: none; }
+#coreView { margin: 0; padding: 12px 14px; height: 560px; overflow: auto; font-family: var(--mono); font-size: 14px; line-height: 1.55; background: #fbfcfe; white-space: pre; }
+.skip { position: absolute; left: -9999px; top: 8px; background: var(--sun); color: var(--ink); padding: 8px 12px; border-radius: 8px; z-index: 50; font-weight: 700; }
+.skip:focus { left: 8px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.settings-wrap { position: relative; }
+.settings-wrap .pop { left: auto; right: 0; color: var(--ink); }
+.settings-wrap .pop label { display: flex; gap: 8px; align-items: center; }
+.settings-wrap .pop input[type="text"], .settings-wrap .pop select { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; background: #fff; color: var(--ink); }
+.typebar { display: none; flex-wrap: wrap; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); background: #f6f8fc; }
+.typebar.on { display: flex; }
+.typebar button { min-width: 44px; min-height: 40px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-family: var(--mono); font-weight: 700; font-size: 16px; cursor: pointer; color: var(--ink); }
+.typebar button:active { background: #fff2cc; }
+@media (pointer: coarse) { .typebar.auto { display: flex; } }
+body.big .editor, body.big #coreView { font-size: 20px; line-height: 32px; }
+body.big .output .out-say, body.big .memory { font-size: 18px; }
+body.big .gutter { width: 54px; }
+.out-error .tip::before { content: none; }
+dialog.kd { border: 0; border-radius: 16px; padding: 0; width: min(640px, 94vw); box-shadow: 0 20px 60px rgba(23,34,74,.35); color: var(--ink); }
+dialog.kd::backdrop { background: rgba(23,34,74,.45); }
+dialog.kd form { display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; }
+dialog.kd h3 { margin: 0; font-family: var(--display); font-size: 22px; }
+dialog.kd label { font-weight: 700; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+dialog.kd input, dialog.kd textarea { font-weight: 400; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 14px; }
+dialog.kd textarea { min-height: 70px; font-family: var(--mono); font-size: 13px; resize: vertical; }
+dialog.kd .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+dialog.kd .note { color: var(--ink-soft); font-size: 13px; margin: 0; }
+dialog.kd table { width: 100%; border-collapse: collapse; font-size: 14px; }
+dialog.kd th, dialog.kd td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
+.banner { border-bottom: 1px solid var(--line); background: #f2f6ff; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.banner[hidden] { display: none; }
+.banner h4 { margin: 0; font-family: var(--display); font-size: 17px; color: var(--sky); }
+.banner p { margin: 0; font-size: 14px; white-space: pre-wrap; }
+.banner .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.banner ul { margin: 0; padding-left: 18px; font-size: 13.5px; }
+.banner .ok { color: #0b6c45; } .banner .no { color: #a32025; }
+.btn-small { border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; background: var(--sky); color: #fff; font-size: 14px; }
+.btn-small.ghost { background: #fff; color: var(--sky); border: 1px solid var(--sky); }
+footer { text-align: center; font-size: 13px; color: var(--ink-soft); padding: 0 20px 24px; }
+@media (prefers-reduced-motion: reduce) { .btn, .click-buttons button { transition: none; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#code" data-i18n>Skip to the code editor</a>
+<header>
+  <div class="brand">
+    <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+      <rect x="6" y="11" width="32" height="26" rx="8" fill="#ffb703"/>
+      <rect x="20.5" y="3" width="3" height="8" fill="#ffb703"/>
+      <circle cx="22" cy="4" r="3.5" fill="#e5484d"/>
+      <circle cx="16" cy="22" r="4" fill="#17224a"/><circle cx="28" cy="22" r="4" fill="#17224a"/>
+      <circle cx="17.2" cy="20.8" r="1.3" fill="#fff"/><circle cx="29.2" cy="20.8" r="1.3" fill="#fff"/>
+      <path d="M15 30 q7 5 14 0" stroke="#17224a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <h1>KidAI <span>Easy</span></h1>
+      <p>Write code in plain English. Meet Sparky, your robot.</p>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="btn btn-run" id="run" title="Run (Ctrl + Enter)">
+      <svg width="16" height="18" viewBox="0 0 16 18" aria-hidden="true"><path d="M1 1 L15 9 L1 17 Z" fill="currentColor"/></svg>Run
+    </button>
+    <button class="btn btn-step" id="step" title="Run one line at a time">
+      <svg width="18" height="16" viewBox="0 0 18 16" aria-hidden="true"><path d="M1 1 L10 8 L1 15 Z" fill="currentColor"/><rect x="12" y="1" width="4" height="14" rx="1" fill="currentColor"/></svg>Step
+    </button>
+    <button class="btn btn-stop" id="stop" disabled>
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect width="14" height="14" rx="2" fill="currentColor"/></svg>Stop
+    </button>
+    <select id="speed" class="speed" aria-label="How fast to run">
+      <option value="normal">Normal speed</option>
+      <option value="slow">Slow: watch each line</option>
+      <option value="slower">Very slow</option>
+    </select>
+    <select id="examples" class="examples" aria-label="Load an example program"></select>
+    <label class="toggle"><input type="checkbox" id="slow" checked> Watch Sparky draw</label>
+    <div class="settings-wrap">
+      <button class="btn btn-ghost" id="setBtn" type="button" aria-expanded="false" aria-controls="setPop">Settings</button>
+      <div class="pop" id="setPop" hidden>
+        <label for="langSel">Language <select id="langSel"><option value="en">English</option><option value="hi">हिन्दी (Hindi)</option></select></label>
+        <label><input type="checkbox" id="bigText"> Bigger text</label>
+        <label><input type="checkbox" id="typeKeys"> Show typing keys for phones and tablets</label>
+        <h4>Chat gateway address (for grown-ups)</h4>
+        <div class="row"><input type="text" id="chatUrl" placeholder="http://localhost:8787/chat" aria-label="Chat gateway address"><button class="mini" id="saveChat" type="button">Save</button><span class="note" id="chatMsg" role="status"></span></div>
+        <p class="note">Leave empty unless a grown-up set up a KidAI chat gateway.</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="left">
+  <section class="panel" aria-label="Code editor" style="overflow:visible">
+    <div class="panel-head">
+      <div class="proj">
+        <input id="projname" aria-label="Project name" value="My program" maxlength="40">
+        <button class="mini" id="projBtn" type="button" aria-expanded="false" aria-controls="projPop">My projects</button>
+        <button class="mini" id="shareBtn" type="button" aria-expanded="false" aria-controls="sharePop">Share</button>
+        <div class="pop" id="projPop" hidden>
+          <h4>My projects</h4>
+          <ul class="plist" id="plist"></ul>
+          <div class="row">
+            <button class="mini" id="newProj" type="button">New project</button>
+            <button class="mini" id="dupProj" type="button">Make a copy</button>
+            <label class="mini" for="openFile" style="cursor:pointer">Open a .kid file</label>
+            <input type="file" id="openFile" accept=".kid,.txt,text/plain" hidden>
+            <button class="mini" id="saveFile" type="button">Save as a .kid file</button>
+          </div>
+          <p class="note">Projects are saved in this browser on this device.</p>
+          <h4>Class challenges</h4>
+          <div class="row">
+            <button class="mini" id="makeChallenge" type="button">Make a challenge from this program</button>
+            <button class="mini" id="markWork" type="button">Check students' work</button>
+          </div>
+          <p class="note">Students open a challenge with the share box. No accounts needed.</p>
+        </div>
+        <div class="pop" id="sharePop" hidden>
+          <h4>Share this project</h4>
+          <p class="note">Copy this share code and send it to a friend. They paste it below to open their own copy (a remix).</p>
+          <textarea id="shareCode" readonly aria-label="Share code"></textarea>
+          <div class="row"><button class="mini" id="copyCode" type="button">Copy share code</button><button class="mini" id="copyLink" type="button">Copy share link</button><span class="note" id="copyMsg" role="status"></span></div>
+          <h4>Open a friend's project</h4>
+          <textarea id="pasteCode" aria-label="Paste a share code or link"></textarea>
+          <div class="row"><button class="mini" id="openShared" type="button">Open as a remix</button><span class="note" id="openMsg" role="status"></span></div>
+        </div>
+      </div>
+      <span class="status" id="status" data-s="idle" role="status" aria-live="polite">Ready</span>
+    </div>
+    <div class="banner" id="challengeBanner" hidden aria-live="polite">
+      <h4 id="chTitle"></h4>
+      <p id="chText"></p>
+      <div class="row"><button type="button" class="btn-small" id="chCheck">Check my work</button><button type="button" class="btn-small ghost" id="chHand">Hand it in</button><span class="note" id="chScore"></span></div>
+      <ul id="chResults"></ul>
+    </div>
+    <div class="modes" role="tablist" aria-label="How to see your program">
+      <button type="button" role="tab" id="tabCode" aria-selected="true" aria-controls="editorBox">Code</button>
+      <button type="button" role="tab" id="tabBlocks" aria-selected="false" aria-controls="blocksArea">Blocks</button>
+      <button type="button" role="tab" id="tabCore" aria-selected="false" aria-controls="coreView">Grown-up code</button>
+      <span class="hint" id="modeHint">Blocks and code are the same program.</span>
+    </div>
+    <div id="blocksArea" hidden><div id="blocklyDiv" style="position:absolute;inset:0"></div><div class="blocks-msg" id="blocksMsg" role="alert" hidden></div></div>
+    <pre id="coreView" hidden tabindex="0" aria-label="Your program written in grown-up KidAI Core style"></pre>
+    <div class="editor" id="editorBox">
+      <div class="gutter" id="gutter" aria-hidden="true"></div>
+      <div class="code-wrap">
+        <pre id="hl" aria-hidden="true"></pre>
+        <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Type your KidAI program here" aria-describedby="status"></textarea>
+      </div>
+    </div>
+    <div class="typebar auto" id="typebar" role="toolbar" aria-label="Typing keys">
+      <button type="button" data-ins=":">:</button><button type="button" data-ins='""' data-back="1">" "</button><button type="button" data-ins="[]" data-back="1">[ ]</button>
+      <button type="button" data-ins="()" data-back="1">( )</button><button type="button" data-ins=", ">,</button><button type="button" data-ins=" + "> + </button>
+      <button type="button" data-ins=" is ">is</button><button type="button" data-ins="  ">⇥</button><button type="button" data-ins="
+end
+">end</button>
+      <button type="button" data-ins="say ">say</button><button type="button" data-ins="set  to " data-back="4">set</button><button type="button" data-ins="repeat  times:" data-back="7">repeat</button><button type="button" data-ins="if :" data-back="1">if</button>
+    </div>
+  </section>
+  <section class="panel" aria-label="Sparky's memory">
+    <div class="panel-head"><span>Sparky's memory <small>· everything your program remembers</small></span><span class="status" id="lineInfo" data-s="idle">Line –</span></div>
+    <div class="memory" id="mem" aria-live="off"><p class="empty">Run your program to see what Sparky remembers. Try <b>Step</b> to go one line at a time.</p></div>
+  </section>
+  </div>
+
+  <div class="right">
+    <section class="panel" aria-label="Drawing stage">
+      <div class="panel-head"><span>Sparky's stage</span><small>middle is 0, 0 · edges are 200 steps away</small></div>
+      <div class="stage-box">
+        <div class="stage" id="stage" tabindex="0" role="img" aria-label="Sparky's stage. Click here, then use your keyboard for games.">
+          <canvas id="bg" width="800" height="800" aria-hidden="true"></canvas>
+          <canvas id="draw" width="800" height="800" aria-hidden="true"></canvas>
+          <canvas id="spr" width="800" height="800" aria-hidden="true"></canvas>
+          <canvas id="bot" width="800" height="800" aria-hidden="true"></canvas>
+        </div>
+        <div class="click-buttons" id="buttons" aria-label="Buttons made by your program"></div>
+        <div class="keypad" id="keypad" hidden>
+          <p class="stage-note" id="keyhint">Click the stage, then use your keyboard. On a tablet, tap these keys:</p>
+          <div class="keys" id="keys"></div>
+        </div>
+      </div>
+    </section>
+    <section class="panel" aria-label="What Sparky says">
+      <div class="panel-head"><span>Sparky says</span><button class="btn btn-ghost" id="clearOut" style="color:var(--ink);background:#edf1f8;font-size:13px;padding:4px 10px">Clear</button></div>
+      <div class="output" id="out" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+
+<dialog class="kd" id="dlgMake" aria-labelledby="dlgMakeTitle"><form method="dialog" id="formMake">
+  <h3 id="dlgMakeTitle">Make a challenge</h3>
+  <p class="note">Your program is the answer key. KidAI runs it with each test input and saves what it says. Students must make their program say the same things.</p>
+  <label>Challenge title <input id="mkTitle" required maxlength="60" value="My challenge"></label>
+  <label>What should students do? <textarea id="mkText">Ask for a number and say double that number.</textarea></label>
+  <label>Test inputs: one test per line. If the program asks more than one question, separate the answers with | <textarea id="mkTests">4
+10
+-3</textarea></label>
+  <label>Starter code for students <textarea id="mkStarter"># Write your program here
+</textarea></label>
+  <div class="row"><button class="btn-small" id="mkGo" type="button">Create the challenge code</button><button class="btn-small ghost" value="cancel">Close</button></div>
+  <ul id="mkPreview" class="note"></ul>
+  <label>Challenge code to send to students <textarea id="mkCode" readonly></textarea></label>
+  <div class="row"><button class="btn-small ghost" id="mkCopy" type="button">Copy challenge code</button><span class="note" id="mkMsg" role="status"></span></div>
+</form></dialog>
+<dialog class="kd" id="dlgMark" aria-labelledby="dlgMarkTitle"><form method="dialog">
+  <h3 id="dlgMarkTitle">Check students' work</h3>
+  <p class="note">Paste the hand-in codes students sent you, one per line. KidAI runs every program again with the challenge tests.</p>
+  <textarea id="mkSubs" aria-label="Hand-in codes"></textarea>
+  <div class="row"><button class="btn-small" id="mkMark" type="button">Check them</button><button class="btn-small ghost" value="cancel">Close</button></div>
+  <table><thead><tr><th>Student</th><th>Challenge</th><th>Score</th><th>Program</th></tr></thead><tbody id="mkTable"></tbody></table>
+</form></dialog>
+<dialog class="kd" id="dlgHand" aria-labelledby="dlgHandTitle"><form method="dialog">
+  <h3 id="dlgHandTitle">Hand in your work</h3>
+  <label>Your name (first name only is fine) <input id="hdName" maxlength="40"></label>
+  <div class="row"><button class="btn-small" id="hdGo" type="button">Make my hand-in code</button><button class="btn-small ghost" value="cancel">Close</button></div>
+  <label>Send this code to your teacher <textarea id="hdCode" readonly></textarea></label>
+  <div class="row"><button class="btn-small ghost" id="hdCopy" type="button">Copy hand-in code</button><span class="note" id="hdMsg" role="status"></span></div>
+</form></dialog>
+
+<section class="book" aria-label="Word book">
+  <h2>Sparky's word book</h2>
+  <p>Every instruction KidAI Easy knows. Blocks start with a line ending in <b>:</b> and finish with <b>end</b>. Press <b>Add to my code</b> to try one.</p>
+  <div class="cards" id="cards"></div>
+</section>
+<footer>KidAI Easy 1.0 · runs entirely on this device · no internet, no camera, no files · endless loops get stopped safely</footer>
+
+<script>
+/*KIDAI_JS*/
+</script>
+<script>
+/*BLOCKS_JS*/
+</script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  // ---------------------------------------------------------------- languages (keywords stay English)
+  const HI = {"Write code in plain English. Meet Sparky, your robot.": "आसान अंग्रेज़ी में कोड लिखिए। मिलिए अपने रोबोट Sparky से।", "Run": "चलाओ", "Step": "एक-एक लाइन", "Stop": "रोको", "Normal speed": "सामान्य गति", "Slow: watch each line": "धीमे: हर लाइन देखिए", "Very slow": "बहुत धीमे", "Watch Sparky draw": "Sparky को चित्र बनाते देखिए", "Examples…": "उदाहरण…", "My projects": "मेरे प्रोजेक्ट", "Share": "शेयर करें", "Settings": "सेटिंग्स", "New project": "नया प्रोजेक्ट", "Make a copy": "कॉपी बनाएँ", "Open a .kid file": ".kid फ़ाइल खोलें", "Save as a .kid file": ".kid फ़ाइल में सेव करें", "Projects are saved in this browser on this device.": "प्रोजेक्ट इसी डिवाइस के इस ब्राउज़र में सेव होते हैं।", "Share this project": "यह प्रोजेक्ट शेयर करें", "Copy this share code and send it to a friend. They paste it below to open their own copy (a remix).": "यह शेयर कोड कॉपी करके दोस्त को भेजिए। वे इसे नीचे चिपकाकर अपनी कॉपी (रीमिक्स) खोल सकते हैं।", "Copy share code": "शेयर कोड कॉपी करें", "Copy share link": "शेयर लिंक कॉपी करें", "Open a friend's project": "दोस्त का प्रोजेक्ट खोलें", "Open as a remix": "रीमिक्स के रूप में खोलें", "Open": "खोलें", "Open now": "अभी खुला है", "Delete": "हटाएँ", "Sure?": "पक्का?", "Ready": "तैयार", "Running…": "चल रहा है…", "Finished": "पूरा हुआ", "Stopped": "रुक गया", "Needs a fix": "ठीक करना है", "Paused · press Step": "रुका है · एक-एक लाइन दबाइए", "Listening · press Stop to end": "इंतज़ार में · खत्म करने के लिए रोको दबाइए", "Code": "कोड", "Blocks": "ब्लॉक", "Grown-up code": "बड़ों वाला कोड", "Blocks and code are the same program.": "ब्लॉक और कोड एक ही प्रोग्राम हैं।", "For reading: this is how bigger languages write the same ideas.": "पढ़ने के लिए: बड़ी भाषाएँ यही बातें ऐसे लिखती हैं।", "Loading blocks…": "ब्लॉक लोड हो रहे हैं…", "Blocks need the internet the first time. Check your connection.": "पहली बार ब्लॉक के लिए इंटरनेट चाहिए। कनेक्शन देखिए।", "Fix the block problem first.": "पहले ब्लॉक वाली दिक्कत ठीक कीजिए।", "Fix the errors in your code first.": "पहले अपने कोड की गलतियाँ ठीक कीजिए।", "Fix the red line first, then switch to blocks.": "पहले लाल लाइन ठीक कीजिए, फिर ब्लॉक पर जाइए।", "Fix the block problem shown in the blocks area, then press Run.": "ब्लॉक वाली जगह में दिखी दिक्कत ठीक कीजिए, फिर चलाओ दबाइए।", "Sparky's memory": "Sparky की याददाश्त", "· everything your program remembers": "· जो कुछ आपका प्रोग्राम याद रखता है", "Run your program to see what Sparky remembers. Try ": "Sparky क्या याद रखता है, यह देखने के लिए प्रोग्राम चलाइए। एक-एक लाइन चलाने के लिए ", " to go one line at a time.": " आज़माइए।", "Name": "नाम", "What is inside": "अंदर क्या है", "Kind": "किस्म", "Done": "हो गया", "Starting…": "शुरू हो रहा है…", "No variables yet. They appear here when your program uses ": "अभी कोई variable नहीं। ये तब दिखेंगे जब आपका प्रोग्राम ", ", ": ", ", " or ": " या ", " or for each.": " या for each इस्तेमाल करेगा।", "Inside the recipe": "रेसिपी के अंदर:", "No inputs": "कोई इनपुट नहीं", "Sparky is at {0}, {1} facing {2}.": "Sparky {0}, {1} पर है और {2} की ओर देख रहा है।", "number": "संख्या", "text": "टेक्स्ट", "list": "सूची", "record": "रिकॉर्ड", "picture": "तस्वीर", "yes/no": "हाँ/ना", "nothing": "कुछ नहीं", "Sparky's stage": "Sparky का मंच", "middle is 0, 0 · edges are 200 steps away": "बीच में 0, 0 · किनारे 200 कदम दूर", "Click the stage, then use your keyboard. On a tablet, tap these keys:": "मंच पर क्लिक कीजिए, फिर कीबोर्ड इस्तेमाल कीजिए। टैबलेट पर ये बटन दबाइए:", "Sparky says": "Sparky कहता है", "Clear": "साफ़ करें", "Sparky's word book": "Sparky की शब्द-पुस्तक", "Every instruction KidAI Easy knows. Blocks start with a line ending in ": "KidAI Easy के सारे निर्देश। ब्लॉक ऐसी लाइन से शुरू होते हैं जिसके अंत में ", " and finish with ": " हो, और ", ". Press ": " पर खत्म होते हैं। आज़माने के लिए ", " to try one.": " दबाइए।", "Add to my code": "मेरे कोड में जोड़ें", "KidAI Easy 1.0 · runs entirely on this device · no internet, no camera, no files · endless loops get stopped safely": "KidAI Easy · पूरी तरह इसी डिवाइस पर चलता है · ना इंटरनेट, ना कैमरा, ना फ़ाइलें · अंतहीन loop सुरक्षित रूप से रुक जाते हैं", "Oops! Line ": "उफ़! लाइन ", "Oops!": "उफ़!", "Tip:": "सुझाव:", "You stopped the program.": "आपने प्रोग्राम रोक दिया।", "Welcome back! \"{0}\" is where you left it. Press Run.": "फिर से स्वागत है! \"{0}\" वहीं है जहाँ आपने छोड़ा था। चलाओ दबाइए।", "OK": "ठीक है", "(no answer)": "(कोई जवाब नहीं)", "(stopped)": "(रुक गया)", "AI guess: ": "AI का अंदाज़ा: ", "{0}% sure": "{0}% पक्का", "Guessed {0} using {1} examples you taught it. This tiny AI runs on this device and sent nothing to the internet. AI can be wrong, so check its answer!": "आपके सिखाए {1} उदाहरणों से {0} का अंदाज़ा लगाया। यह छोटा AI इसी डिवाइस पर चलता है और इसने इंटरनेट पर कुछ नहीं भेजा। AI गलत भी हो सकता है, इसलिए जवाब जाँचिए!", "your picture": "आपकी तस्वीर", "The AI has never seen any of these words, so this is just a guess. Teach it more examples!": "AI ने इनमें से कोई शब्द पहले नहीं देखा, इसलिए यह बस एक अंदाज़ा है। इसे और उदाहरण सिखाइए!", "Why? These words pushed it towards \"{0}\": ": "क्यों? इन शब्दों ने इसे \"{0}\" की ओर धकेला: ", "What the AI saw:": "AI ने क्या देखा:", "Most alike: ": "सबसे मिलती-जुलती: ", "{0}% alike": "{0}% मिलती", "AI test: {0} of {1} right ({2}%)": "AI जाँच: {1} में से {0} सही ({2}%)", "You tested the label \"{0}\". ": "आपने लेबल \"{0}\" की जाँच की। ", "It got these wrong:": "इसने ये गलत बताए:", "It got them all right!": "इसने सब सही बताए!", "\"{0}\" was guessed as \"{1}\"": "\"{0}\" को \"{1}\" समझा गया", "AI prediction: ": "AI का अनुमान: ", "Dark dots are your {0} examples. The dashed line is the pattern the AI found: answer = {1} × input + {2}. The pink dot is its guess for {3}. Real life does not always follow a straight line!": "गहरे बिंदु आपके {0} उदाहरण हैं। टूटी लाइन वह पैटर्न है जो AI ने ढूँढा: जवाब = {1} × इनपुट + {2}। गुलाबी बिंदु {3} के लिए इसका अनुमान है। असली ज़िंदगी हमेशा सीधी लाइन पर नहीं चलती!", "Answer from a cloud AI (Claude). Your question left this device. It can be wrong, so check it!": "क्लाउड AI (Claude) का जवाब। आपका सवाल इस डिवाइस से बाहर गया। यह गलत हो सकता है, इसलिए जाँचिए!", "Use a photo instead": "इसकी जगह फ़ोटो लें", "The AI learned {0} examples of \"{1}\".": "AI ने \"{1}\" के {0} उदाहरण सीखे।", "The AI learned {0} pictures of \"{1}\".": "AI ने \"{1}\" की {0} तस्वीरें सीखीं।", "The AI learned {0} number examples for \"{1}\".": "AI ने \"{1}\" के लिए {0} संख्या वाले उदाहरण सीखे।", "Opened \"{0}\" as your own copy. Change anything you like!": "\"{0}\" आपकी अपनी कॉपी के रूप में खुल गया। जो चाहें बदलिए!", "That doesn't look like a KidAI share code.": "यह KidAI शेयर कोड जैसा नहीं दिखता।", "That share code seems broken. Ask your friend to copy it again.": "यह शेयर कोड टूटा हुआ लगता है। दोस्त से दोबारा कॉपी करने को कहिए।", "Copied!": "कॉपी हो गया!", "Press Ctrl + C to copy.": "कॉपी करने के लिए Ctrl + C दबाइए।", "Link copied. It opens when the playground is on a website.": "लिंक कॉपी हो गया। यह तब खुलेगा जब प्लेग्राउंड किसी वेबसाइट पर हो।", "Language": "भाषा", "Bigger text": "बड़े अक्षर", "Chat gateway address (for grown-ups)": "Chat gateway का पता (बड़ों के लिए)", "Leave empty unless a grown-up set up a KidAI chat gateway.": "जब तक किसी बड़े ने KidAI chat gateway सेट न किया हो, इसे खाली छोड़िए।", "Save": "सेव करें", "Saved.": "सेव हो गया।", "Typing keys": "टाइपिंग बटन", "Show typing keys for phones and tablets": "फ़ोन और टैबलेट के लिए टाइपिंग बटन दिखाएँ", "Skip to the code editor": "कोड एडिटर पर जाएँ", "Describe the stage": "मंच का वर्णन", "Talk": "बोलो", "Values": "मान", "Variables": "Variables", "Decide": "फ़ैसला", "Loops": "Loops", "Lists & text": "सूची और टेक्स्ट", "Recipes": "रेसिपी", "Drawing": "चित्र", "Games": "खेल", "Sound": "आवाज़", "AI": "AI", "Saving": "सेव", "Say something": "कुछ बोलो", "Shows words, numbers or answers.": "शब्द, संख्याएँ या जवाब दिखाता है।", "Remember things": "चीज़ें याद रखो", "set makes a variable. change adds to a number.": "set एक variable बनाता है। change किसी संख्या में जोड़ता है।", "Ask a question": "सवाल पूछो", "Waits for an answer and keeps it. Numbers stay numbers.": "जवाब का इंतज़ार करता है और उसे रखता है। संख्याएँ संख्या ही रहती हैं।", "Decide with if": "if से फ़ैसला करो", "Use is, is not, is bigger than, >, <, and, or, not.": "is, is not, is bigger than, >, <, and, or, not इस्तेमाल कीजिए।", "Repeat": "दोहराओ", "Do the same thing again and again.": "एक ही काम बार-बार करो।", "Repeat until": "तब तक दोहराओ", "Keeps going until the question becomes yes.": "तब तक चलता है जब तक सवाल का जवाब हाँ न हो जाए।", "Repeat forever": "हमेशा दोहराओ", "Runs until you press Stop. stop jumps out of a loop.": "रोको दबाने तक चलता है। stop loop से बाहर कूद जाता है।", "Lists": "सूचियाँ", "Lists start at item 1.": "सूचियाँ item 1 से शुरू होती हैं।", "For each": "हर एक के लिए", "Does something with every item in a list.": "सूची की हर चीज़ के साथ कुछ करता है।", "Random": "अचानक", "Pick a surprise number or item.": "कोई अचानक संख्या या चीज़ चुनो।", "Make your own instruction with define. give back sends an answer.": "define से अपना निर्देश बनाइए। give back जवाब लौटाता है।", "Move Sparky": "Sparky को चलाओ", "Sparky starts in the middle, facing up.": "Sparky बीच से शुरू करता है, ऊपर की ओर देखते हुए।", "Pen and colors": "पेन और रंग", "pen up moves without drawing.": "pen up बिना चित्र बनाए चलता है।", "Start again": "फिर से शुरू", "clear wipes the stage. go home goes back to the middle.": "clear मंच साफ़ करता है। go home बीच में लौटाता है।", "Teach the AI": "AI को सिखाओ", "Give it examples for at least two labels.": "कम से कम दो लेबल के उदाहरण दीजिए।", "Ask the AI to guess": "AI से अंदाज़ा लगवाओ", "how sure tells you how confident it is. It can be wrong!": "how sure बताता है कि AI कितना पक्का है। यह गलत भी हो सकता है!", "Wait": "रुको", "Pause for some seconds.": "कुछ सेकंड रुको।", "Buttons": "बटन", "Makes a button under the stage.": "मंच के नीचे एक बटन बनाता है।", "Sprites": "Sprites", "Characters made from emoji or words. The stage edges are 200 steps from the middle.": "इमोजी या शब्दों से बने किरदार। मंच के किनारे बीच से 200 कदम दूर हैं।", "More sprite tricks": "sprite की और तरकीबें", "Change a sprite's look, move it to a spot, hide it, or check the edge.": "sprite का रूप बदलिए, उसे किसी जगह ले जाइए, छिपाइए या किनारा जाँचिए।", "Keyboard": "कीबोर्ड", "Run a block when a key is pressed, or check if a key is held down.": "कोई बटन दबने पर ब्लॉक चलाइए, या देखिए कि बटन दबा हुआ है या नहीं।", "Every": "हर", "Runs a block on a timer until you press Stop.": "रोको दबाने तक टाइमर पर ब्लॉक चलाता है।", "Sounds and notes": "आवाज़ें और सुर", "Notes are A to G, like \"C\", \"F#\" or \"C5\". Sounds: pop, coin, jump, boom, laser, win, lose.": "सुर A से G तक हैं, जैसे \"C\", \"F#\" या \"C5\"। आवाज़ें: pop, coin, jump, boom, laser, win, lose।", "Stage extras": "मंच की और चीज़ें", "Colour the stage, write words, and draw filled shapes.": "मंच रंगिए, शब्द लिखिए और भरी हुई आकृतियाँ बनाइए।", "Where is Sparky?": "Sparky कहाँ है?", "x position, y position and direction tell you where Sparky is.": "x position, y position और direction बताते हैं कि Sparky कहाँ है।", "Stop everything": "सब रोको", "Ends the whole program, including buttons, keys and timers.": "पूरा प्रोग्राम खत्म करता है, बटन, कीबोर्ड और टाइमर समेत।", "Test the AI": "AI की जाँच", "Checks how many examples the AI gets right. how accurate gives the percent.": "देखता है कि AI कितने उदाहरण सही बताता है। how accurate प्रतिशत देता है।", "Picture AI": "तस्वीर वाला AI", "Draw pictures (or use photos) and teach the AI to tell them apart.": "तस्वीरें बनाइए (या फ़ोटो लीजिए) और AI को उनमें फ़र्क करना सिखाइए।", "Stage picture": "मंच की तस्वीर", "A picture of whatever Sparky has drawn, so code can make training pictures.": "Sparky ने जो बनाया उसकी तस्वीर, ताकि कोड सिखाने वाली तस्वीरें बना सके।", "Number AI": "संख्या वाला AI", "learn finds a pattern in [input, answer] pairs. predict uses it.": "learn [इनपुट, जवाब] जोड़ों में पैटर्न ढूँढता है। predict उसे इस्तेमाल करता है।", "Chat with a big AI": "बड़े AI से बात", "Asks Claude on the internet. Check the answer!": "इंटरनेट पर Claude से पूछता है। जवाब जाँचिए!", "Save the AI": "AI को सेव करो", "Keep what the AI learned for next time, or make it forget.": "AI ने जो सीखा उसे अगली बार के लिए रखिए, या उसे भुलवा दीजिए।", "Records": "रिकॉर्ड", "Keep named facts together.": "नाम वाली बातें एक साथ रखिए।", "Text tools": "टेक्स्ट के औज़ार", "split, join, replace, starts with, ends with.": "split, join, replace, starts with, ends with।", "Save and load": "सेव और लोड", "Things you save are still there next time.": "जो सेव करेंगे, वह अगली बार भी रहेगा।", "Use another project": "दूसरा प्रोजेक्ट इस्तेमाल करो", "Borrow recipes from another project (or .kid file).": "दूसरे प्रोजेक्ट (या .kid फ़ाइल) से रेसिपी उधार लीजिए।", "Project name": "प्रोजेक्ट का नाम", "Type your KidAI program here": "अपना KidAI प्रोग्राम यहाँ लिखिए", "How fast to run": "कितनी तेज़ चलाएँ", "Load an example program": "कोई उदाहरण प्रोग्राम खोलें", "Class challenges": "क्लास चुनौतियाँ", "Make a challenge from this program": "इस प्रोग्राम से चुनौती बनाएँ", "Check students' work": "बच्चों का काम जाँचें", "Students open a challenge with the share box. No accounts needed.": "बच्चे शेयर बॉक्स से चुनौती खोलते हैं। कोई अकाउंट नहीं चाहिए।", "Make a challenge": "चुनौती बनाएँ", "Your program is the answer key. KidAI runs it with each test input and saves what it says. Students must make their program say the same things.": "आपका प्रोग्राम ही उत्तर-कुंजी है। KidAI इसे हर टेस्ट इनपुट के साथ चलाकर इसका जवाब सेव करता है। बच्चों का प्रोग्राम भी वही बोलना चाहिए।", "Challenge title": "चुनौती का नाम", "What should students do?": "बच्चों को क्या करना है?", "Test inputs: one test per line. If the program asks more than one question, separate the answers with |": "टेस्ट इनपुट: हर लाइन में एक टेस्ट। अगर प्रोग्राम एक से ज़्यादा सवाल पूछता है, तो जवाबों को | से अलग कीजिए", "Starter code for students": "बच्चों के लिए शुरुआती कोड", "Create the challenge code": "चुनौती कोड बनाएँ", "Close": "बंद करें", "Challenge code to send to students": "बच्चों को भेजने वाला चुनौती कोड", "Copy challenge code": "चुनौती कोड कॉपी करें", "Paste the hand-in codes students sent you, one per line. KidAI runs every program again with the challenge tests.": "बच्चों के भेजे जमा-कोड यहाँ चिपकाइए, हर लाइन में एक। KidAI हर प्रोग्राम को चुनौती के टेस्ट से फिर चलाता है।", "Check them": "जाँचें", "Student": "बच्चा", "Challenge": "चुनौती", "Score": "अंक", "Program": "प्रोग्राम", "Hand in your work": "अपना काम जमा करें", "Your name (first name only is fine)": "आपका नाम (सिर्फ़ पहला नाम भी चलेगा)", "Make my hand-in code": "मेरा जमा-कोड बनाएँ", "Send this code to your teacher": "यह कोड अपने टीचर को भेजिए", "Copy hand-in code": "जमा-कोड कॉपी करें", "Check my work": "मेरा काम जाँचें", "Hand it in": "जमा करें", "Challenge: ": "चुनौती: ", "Checking…": "जाँच हो रही है…", "Test": "टेस्ट", "correct": "सही", "it should say \"{0}\" but your program says \"{1}\"": "इसे \"{0}\" बोलना चाहिए, पर आपका प्रोग्राम \"{1}\" बोलता है", "{0} of {1} tests pass": "{1} में से {0} टेस्ट पास", "It took too long (more than 3 seconds).": "इसमें बहुत देर लगी (3 सेकंड से ज़्यादा)।", "Your program has a problem: ": "आपके प्रोग्राम में दिक्कत है: ", "(no input)": "(कोई इनपुट नहीं)", "(says nothing)": "(कुछ नहीं बोलता)", "This is not a hand-in code.": "यह जमा-कोड नहीं है।", "No hand-in codes found.": "कोई जमा-कोड नहीं मिला।", "Challenge opened. Read the task above the code, then press \"Check my work\".": "चुनौती खुल गई। कोड के ऊपर काम पढ़िए, फिर \"मेरा काम जाँचें\" दबाइए।", "Opened a hand-in. Use \"Check students' work\" to mark several at once.": "एक जमा किया काम खुला। कई एक साथ जाँचने के लिए \"बच्चों का काम जाँचें\" इस्तेमाल कीजिए।"};
+  let LANG = 'en';
+  try { LANG = localStorage.getItem('kidai-lang') || 'en'; } catch (e) { LANG = 'en'; }
+  const t = (s) => (LANG === 'hi' && HI[s] !== undefined ? HI[s] : s);
+  const tf = (s, ...a) => t(s).replace(/\{(\d)\}/g, (m, i) => a[i]);
+  const ORIG = new WeakMap();
+  function translatePage() {
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => {
+      const p = n.parentElement; if (!p) return NodeFilter.FILTER_REJECT;
+      if (p.closest('textarea, pre, #out, #mem, .blocklyDiv, #blocklyDiv, .card pre, #plist, script, style, .cards, #examples option:not([value=""])')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT; } });
+    const nodes = []; while (walk.nextNode()) nodes.push(walk.currentNode);
+    for (const n of nodes) {
+      if (!ORIG.has(n)) ORIG.set(n, n.nodeValue);
+      const en = ORIG.get(n), key = en.trim();
+      if (!key) continue;
+      const lead = en.match(/^\s*/)[0], tail = en.match(/\s*$/)[0];
+      n.nodeValue = LANG === 'hi' && HI[key] !== undefined ? lead + HI[key] + tail : (LANG === 'hi' && HI[en] !== undefined ? HI[en] : en);
+    }
+    document.querySelectorAll('[aria-label],[title],[placeholder]').forEach((el) => {
+      for (const a of ['aria-label', 'title']) {
+        if (!el.hasAttribute(a)) continue;
+        const k = 'data-en-' + a; if (!el.hasAttribute(k)) el.setAttribute(k, el.getAttribute(a));
+        el.setAttribute(a, t(el.getAttribute(k)));
+      }
+    });
+    document.documentElement.lang = LANG === 'hi' ? 'hi' : 'en';
+    if (window.KidAI) KidAI.setLanguage(LANG);
+  }
+  const code = $('code'), hl = $('hl'), gutter = $('gutter'), out = $('out');
+  const runBtn = $('run'), stopBtn = $('stop'), statusEl = $('status');
+
+  // ------------------------------------------------ examples
+  const EXAMPLES = {
+    'Welcome to KidAI': `# Welcome! Press Run to see what this does.
+say "Hello! I am Sparky the robot."
+say "Watch me draw a star."
+
+color "gold"
+pen size 5
+repeat 5 times:
+  forward 150
+  turn right 144
+end
+
+set friends to 3
+change friends by 1
+say "Now I have " + friends + " friends. Will you be one?"
+`,
+    'Hello robot (asks questions)': `# My first program
+say "Hello! I am Sparky the robot."
+ask "What is your name?" into name
+say "Nice to meet you, " + name + "!"
+
+ask "How old are you?" into age
+if age > 10:
+  say "Wow, " + age + " is a great age for coding!"
+else:
+  say "You are starting early. Super cool!"
+end
+`,
+    'Guess the number game': `# Guess the number game
+set secret to random 1 to 20
+set tries to 0
+set guess_number to 0
+say "I am thinking of a number from 1 to 20."
+
+repeat until guess_number is secret:
+  ask "Your guess?" into guess_number
+  change tries by 1
+  if guess_number is bigger than secret:
+    say "Too big!"
+  else if guess_number is smaller than secret:
+    say "Too small!"
+  end
+end
+
+say "You got it in " + tries + " tries!"
+`,
+    'Times table and lists': `# Times table and lists
+set number to 7
+set count to 1
+repeat 10 times:
+  say number + " x " + count + " = " + number * count
+  change count by 1
+end
+
+set fruits to ["apple", "banana", "mango"]
+add "kiwi" to fruits
+for each fruit in fruits:
+  say "I like " + fruit
+end
+say "I have " + length of fruits + " fruits."
+say "The first one is " + item 1 of fruits
+`,
+    'Draw a flower': `# Draw a flower with the drawing robot
+set colors to ["red", "orange", "gold", "hotpink", "purple", "deepskyblue"]
+pen size 4
+
+for each petal_color in colors:
+  color petal_color
+  repeat 36 times:
+    forward 6
+    turn right 10
+  end
+  turn right 60
+end
+
+color "green"
+pen size 6
+turn right 180
+forward 150
+`,
+    'Teach the AI moods': `# Teach a tiny AI to guess moods
+teach "happy" with ["I love this", "yay so fun", "this is great", "I am smiling"]
+teach "sad" with ["I feel bad", "this is awful", "I am crying", "so sad today"]
+
+ask "Tell me how your day was" into sentence
+set mood to guess sentence
+say "I think you feel " + mood
+say "I am " + how sure + "% sure."
+
+if how sure < 70:
+  say "I'm not very sure. AI can make mistakes!"
+end
+`,
+    'Buttons': `# Buttons make things happen when you click them
+set score to 0
+say "Click the buttons under the stage!"
+
+when clicked "Jump":
+  change score by 1
+  say "Boing! Score: " + score
+end
+
+when clicked "Draw a star":
+  color random item from ["gold", "hotpink", "deepskyblue"]
+  repeat 5 times:
+    forward 100
+    turn right 144
+  end
+end
+
+when clicked "Clear":
+  clear
+  go home
+end
+`,
+    'My own recipes': `# Recipes are your own instructions
+define greet(name):
+  say "Hi " + name + "!"
+end
+
+define double(n):
+  give back n * 2
+end
+
+define square(size):
+  repeat 4 times:
+    forward size
+    turn right 90
+  end
+end
+
+greet("Mira")
+greet("Arjun")
+say "Double 21 is " + double(21)
+color "deepskyblue"
+square(80)
+color "hotpink"
+square(40)
+`,
+    'Game: catch the stars': `# Catch the falling stars!
+# Click the stage, then use the left and right arrow keys.
+background "midnightblue"
+hide
+make sprite "basket" as "🧺" at 0, -170 size 60
+make sprite "star" as "⭐" at 0, 200 size 40
+make sprite "score" as "Score: 0" at -130, 175
+set score to 0
+set speed to 4
+
+repeat forever:
+  if key "left" is pressed:
+    move sprite "basket" by -8, 0
+  end
+  if key "right" is pressed:
+    move sprite "basket" by 8, 0
+  end
+  move sprite "star" by 0, -speed
+  if "star" touches "basket":
+    change score by 1
+    change speed by 0.5
+    play sound "coin"
+    make sprite "score" as "Score: " + score
+    move sprite "star" to random -180 to 180, 200
+  end
+  if y of sprite "star" < -200:
+    play sound "lose"
+    say "Game over! You caught " + score + " stars."
+    stop
+  end
+  wait 0.03
+end
+`,
+    'Music: Twinkle Twinkle': `# Play a tune. Turn your sound on!
+set tune to ["C", "C", "G", "G", "A", "A", "G"]
+for each n in tune:
+  play note n for 0.4 seconds
+end
+play note "F" for 0.4 seconds
+play note "F" for 0.4 seconds
+play note "E" for 0.4 seconds
+play note "E" for 0.4 seconds
+play note "D" for 0.4 seconds
+play note "D" for 0.4 seconds
+play note "C" for 0.8 seconds
+play sound "win"
+`,
+    'Countdown timer (every)': `# "every" runs a block again and again on a timer
+set seconds to 10
+background "lightyellow"
+hide
+make sprite "timer" as seconds at 0, 0 size 140
+
+every 1 second:
+  change seconds by -1
+  make sprite "timer" as seconds
+  beep
+  if seconds is 0:
+    play sound "win"
+    say "Time's up!"
+    stop everything
+  end
+end
+`,
+    'Keyboard drawing (when key)': `# Draw with your keyboard! Click the stage first.
+pen size 4
+say "Arrows move Sparky. Press c to change colour, space for a dot."
+set colors to ["red", "orange", "gold", "green", "deepskyblue", "purple"]
+set i to 1
+
+when key "up" pressed:
+  forward 15
+end
+when key "down" pressed:
+  back 15
+end
+when key "left" pressed:
+  turn left 30
+end
+when key "right" pressed:
+  turn right 30
+end
+when key "space" pressed:
+  dot 10
+end
+when key "c" pressed:
+  set i to i mod 6 + 1
+  color item i of colors
+  play sound "pop"
+end
+`,
+    "AI: teach with drawings": `# Teach the AI to tell circles from squares, using your drawings
+ask picture "Draw a circle" into c1
+ask picture "Draw another circle" into c2
+ask picture "Draw a square" into s1
+ask picture "Draw another square" into s2
+teach "circle" with [c1, c2]
+teach "square" with [s1, s2]
+
+ask picture "Now draw a circle or a square. I will guess!" into mystery
+say "I think it is a " + guess mystery
+say "I am " + how sure + "% sure."
+`,
+    "AI: Sparky makes its own pictures": `# Sparky draws shapes, takes a picture of each, and learns from them
+define take_picture_of_circle(size):
+  clear
+  go home
+  circle size
+  give back stage picture
+end
+
+define take_picture_of_square(size):
+  clear
+  go to 0 - size / 2, 0 - size / 2
+  repeat 4 times:
+    forward size
+    turn right 90
+  end
+  give back stage picture
+end
+
+teach "circle" with [take_picture_of_circle(40), take_picture_of_circle(90)]
+teach "square" with [take_picture_of_square(60), take_picture_of_square(150)]
+
+say "Test on new sizes:"
+test "circle" with [take_picture_of_circle(60), take_picture_of_circle(120)]
+test "square" with [take_picture_of_square(100), take_picture_of_square(40)]
+say "Accuracy on the last test: " + how accurate + "%"
+`,
+    "AI: test your mood AI": `# Real AI makers test their AI on examples it has never seen
+teach "happy" with ["I love this", "yay so fun", "this is great", "I am smiling"]
+teach "sad" with ["I feel bad", "this is awful", "I am crying", "so sad today"]
+
+test "happy" with ["what a great day", "I love my dog", "fun fun fun"]
+say "Happy accuracy: " + how accurate + "%"
+test "sad" with ["I feel awful", "today was bad", "I am not happy"]
+say "Sad accuracy: " + how accurate + "%"
+
+say guess "my homework is great"
+`,
+    "AI: predict a plant": `# A number AI finds a pattern in pairs of numbers: [days of watering, height in cm]
+learn "plant" from [[1, 2], [2, 4.1], [3, 5.9], [4, 8.2], [5, 9.8]]
+
+ask "How many days will you water it?" into days
+set height to predict "plant" for days
+say "After " + days + " days it might be about " + height + " cm tall."
+say "The AI is " + how sure + "% sure the pattern fits."
+`,
+    "AI: ask Claude (chat)": `# chat sends a question to a big AI on the internet. Check its answers!
+ask "What do you want to ask the big AI?" into question
+set reply to chat question
+say reply
+
+# Compare: a tiny AI you trained yourself only knows your examples
+teach "animal" with ["cat", "dog", "lion"]
+teach "food" with ["pizza", "rice", "mango"]
+say "My tiny AI thinks " + question + " is about: " + guess question
+`,
+    "Records: my pet": `# A record keeps named facts together
+set pet to {name: "Tom", kind: "cat", age: 3}
+say pet.name + " is a " + pet.kind
+set pet.age to pet.age + 1
+set pet.toy to "ball of wool"
+say pet
+for each fact in pet:
+  say fact
+end
+`,
+    "Text tools": `# Splitting, joining and replacing words
+set sentence to "I like red and blue and green"
+set colours to split "red,blue,green" by ","
+say colours
+say join colours with " + "
+say replace "like" with "love" in sentence
+if sentence starts with "I":
+  say "It starts with I"
+end
+say split "hello" by ""
+`,
+    "High score (save and load)": `# save keeps something even after you close the page
+load "best" into best
+if best is nothing:
+  set best to 0
+end
+set score to random 1 to 100
+say "You scored " + score + ". Best so far: " + best
+if score > best:
+  save score as "best"
+  say "New high score!"
+  play sound "win"
+end
+`,
+    'Spinning rainbow (forever)': `# A loop that runs until you press Stop
+set colors to ["red", "orange", "gold", "green", "deepskyblue", "purple"]
+pen size 2
+set i to 0
+repeat forever:
+  color item (i mod 6) + 1 of colors
+  forward i
+  turn right 59
+  change i by 1
+  if i > 180:
+    stop
+  end
+  wait 0.02
+end
+say "Done!"
+`
+  };
+
+  const sel = $('examples');
+  const ph = document.createElement('option');
+  ph.textContent = t('Examples…'); ph.value = ''; sel.appendChild(ph);
+  for (const name of Object.keys(EXAMPLES)) {
+    const o = document.createElement('option'); o.value = name; o.textContent = name; sel.appendChild(o);
+  }
+  sel.addEventListener('change', () => {
+    if (!sel.value) return;
+    if (interp) stopRun(true);
+    const name = sel.value;
+    if (projects[name] && projects[name].code === EXAMPLES[name]) openProject(name); else newProject(name, EXAMPLES[name]);
+    sel.value = '';
+    run();
+  });
+
+  // ------------------------------------------------ highlighting
+  const CMD = new Set(['say', 'show', 'print', 'set', 'to', 'change', 'by', 'ask', 'into', 'add', 'remove', 'from', 'wait', 'seconds', 'second', 'give', 'back', 'return', 'stop', 'skip', 'everything', 'play', 'note', 'sound', 'beep', 'save', 'load', 'use']);
+  const BLK = new Set(['if', 'else', 'end', 'repeat', 'times', 'while', 'until', 'forever', 'for', 'each', 'in', 'define', 'when', 'clicked', 'every', 'key', 'pressed']);
+  const AI = new Set(['teach', 'with', 'guess', 'how', 'sure', 'accurate', 'test', 'learn', 'predict', 'chat', 'forget', 'ai', 'picture', 'stage']);
+  const DRAW = new Set(['forward', 'backward', 'turn', 'left', 'right', 'pen', 'up', 'down', 'size', 'color', 'colour', 'circle', 'clear', 'go', 'home', 'hide', 'unhide', 'make', 'sprite', 'as', 'at', 'move', 'delete', 'touches', 'edge', 'write', 'background', 'dot', 'rectangle', 'position', 'direction']);
+  const OPW = new Set(['and', 'or', 'not', 'is', 'bigger', 'smaller', 'than', 'contains', 'mod', 'random', 'item', 'of', 'length', 'yes', 'no', 'true', 'false', 'nothing', 'split', 'join', 'replace', 'keys', 'starts', 'ends']);
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function highlightLine(line) {
+    let html = '', i = 0;
+    while (i < line.length) {
+      const c = line[i];
+      if (c === '#') { html += '<span class="tk-com">' + esc(line.slice(i)) + '</span>'; break; }
+      if ('"\u201C\u201D\'\u2018\u2019'.includes(c)) {
+        const closers = '"\u201C\u201D'.includes(c) ? '"\u201C\u201D' : '\'\u2018\u2019';
+        let j = i + 1;
+        while (j < line.length && !closers.includes(line[j])) j += line[j] === '\\' ? 2 : 1;
+        j = Math.min(j + 1, line.length);
+        html += '<span class="tk-str">' + esc(line.slice(i, j)) + '</span>'; i = j; continue;
+      }
+      if (/[0-9]/.test(c)) {
+        let j = i; while (j < line.length && /[0-9._]/.test(line[j])) j++;
+        html += '<span class="tk-num">' + esc(line.slice(i, j)) + '</span>'; i = j; continue;
+      }
+      if (/[\p{L}_]/u.test(c)) {
+        let j = i; while (j < line.length && /[\p{L}\p{N}_]/u.test(line[j])) j++;
+        const w = line.slice(i, j), lw = w.toLowerCase();
+        const cls = BLK.has(lw) ? 'tk-blk' : AI.has(lw) ? 'tk-ai' : DRAW.has(lw) ? 'tk-draw' : CMD.has(lw) ? 'tk-cmd' : OPW.has(lw) ? 'tk-op' : '';
+        html += cls ? '<span class="' + cls + '">' + esc(w) + '</span>' : esc(w);
+        i = j; continue;
+      }
+      if ('+-*/=<>:,()[]%'.includes(c)) { html += '<span class="tk-op">' + esc(c) + '</span>'; i++; continue; }
+      html += esc(c); i++;
+    }
+    return html;
+  }
+  function highlight(src) { return src.split('\n').map(highlightLine).join('\n'); }
+
+  let badLine = 0, curLine = 0;
+  function sync() {
+    const lines = code.value.split('\n');
+    hl.innerHTML = lines.map((l, i) => {
+      const h = highlightLine(l) || ' ';
+      if (i + 1 === badLine) return '<span class="ln-bad">' + h + '</span>';
+      return i + 1 === curLine ? '<span class="ln-cur">' + h + '</span>' : h;
+    }).join('\n') + '\n';
+    let g = '';
+    for (let i = 1; i <= lines.length; i++) g += '<div' + (i === badLine ? ' class="bad"' : i === curLine ? ' class="cur"' : '') + '>' + i + '</div>';
+    gutter.innerHTML = g;
+    syncScroll();
+  }
+  function syncScroll() {
+    hl.scrollTop = code.scrollTop; hl.scrollLeft = code.scrollLeft;
+    gutter.scrollTop = code.scrollTop;
+  }
+  function setCode(v) {
+    code.value = v; badLine = 0; curLine = 0; sync(); save();
+    if (typeof mode !== 'undefined' && mode === 'blocks' && window.Blockly) { try { codeToBlocks(); } catch (e) { /* shown on switch */ } }
+    if (typeof mode !== 'undefined' && mode === 'core') { try { $('coreView').innerHTML = highlight(KidAI.toCore(v)); } catch (e) { /* ignore */ } }
+  }
+
+  // ------------------------------------------------ projects (saved in this browser)
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage not available */ } }
+  };
+  let projects = store.get('kidai-projects', null);
+  let current = store.get('kidai-current', null);
+  if (!projects) {
+    projects = {};
+    let old = null; try { old = localStorage.getItem('kidai-easy-code'); } catch (e) { old = null; }
+    if (old && old.trim()) { projects['My first program'] = { code: old, updated: Date.now() }; current = 'My first program'; }
+  }
+  const projName = $('projname');
+  function save() {
+    if (!current) return;
+    projects[current] = Object.assign(projects[current] || {}, { code: code.value, updated: Date.now() });
+    store.set('kidai-projects', projects); store.set('kidai-current', current);
+  }
+  function uniqueName(base) {
+    let n = base, i = 2;
+    while (projects[n]) n = base + ' ' + i++;
+    return n;
+  }
+  function fitName() { projName.style.width = Math.min(26, Math.max(8, projName.value.length + 2)) + 'ch'; }
+  projName.addEventListener('input', fitName);
+  function openProject(name) {
+    current = name; projName.value = name; fitName();
+    setCode(projects[name].code);
+    store.set('kidai-current', current);
+    renderProjects();
+    if (typeof showChallenge === 'function') showChallenge();
+  }
+  function newProject(name, src) {
+    const n = uniqueName(name);
+    projects[n] = { code: src, updated: Date.now() };
+    openProject(n);
+    return n;
+  }
+  function renderProjects() {
+    const ul = $('plist'); ul.innerHTML = '';
+    const names = Object.keys(projects).sort((a, b) => projects[b].updated - projects[a].updated);
+    for (const n of names) {
+      const li = document.createElement('li'); if (n === current) li.className = 'cur';
+      const sp = document.createElement('span'); sp.textContent = n;
+      const when = document.createElement('small'); when.textContent = new Date(projects[n].updated).toLocaleDateString();
+      const open = document.createElement('button'); open.className = 'mini'; open.type = 'button'; open.textContent = t(n === current ? 'Open now' : 'Open');
+      open.disabled = n === current;
+      open.addEventListener('click', () => { if (interp) stopRun(true); openProject(n); togglePop('projPop', false); });
+      const del = document.createElement('button'); del.className = 'mini'; del.type = 'button'; del.textContent = t('Delete');
+      del.setAttribute('aria-label', 'Delete ' + n);
+      del.addEventListener('click', () => {
+        if (del.dataset.sure !== 'yes') { del.dataset.sure = 'yes'; del.textContent = t('Sure?'); return; }
+        delete projects[n];
+        if (n === current) { const rest = Object.keys(projects); if (rest.length) openProject(rest[0]); else newProject('My program', ''); }
+        store.set('kidai-projects', projects); renderProjects();
+      });
+      li.append(sp, when, open, del); ul.appendChild(li);
+    }
+  }
+  projName.addEventListener('change', () => {
+    let n = projName.value.trim() || 'My program';
+    if (n === current) { projName.value = n; return; }
+    if (projects[n]) n = uniqueName(n);
+    projects[n] = projects[current] || { code: code.value, updated: Date.now() };
+    delete projects[current]; current = n; projName.value = n; fitName(); save(); renderProjects();
+  });
+  function togglePop(id, show) {
+    const pop = $(id), btn = id === 'projPop' ? $('projBtn') : $('shareBtn');
+    const on = show === undefined ? pop.hidden : show;
+    for (const other of ['projPop', 'sharePop']) { $(other).hidden = true; (other === 'projPop' ? $('projBtn') : $('shareBtn')).setAttribute('aria-expanded', 'false'); }
+    pop.hidden = !on; btn.setAttribute('aria-expanded', String(on));
+    if (on && id === 'projPop') renderProjects();
+    if (on && id === 'sharePop') makeShareCode();
+  }
+  $('projBtn').addEventListener('click', () => togglePop('projPop'));
+  $('shareBtn').addEventListener('click', () => togglePop('sharePop'));
+  document.addEventListener('click', (e) => { if (!e.target.closest('.proj')) { $('projPop').hidden = true; $('sharePop').hidden = true; } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('projPop').hidden = true; $('sharePop').hidden = true; } });
+  $('newProj').addEventListener('click', () => { if (interp) stopRun(true); newProject('My program', '# My new program\nsay "Hello!"\n'); togglePop('projPop', false); code.focus(); });
+  $('dupProj').addEventListener('click', () => { newProject('Copy of ' + current, code.value); togglePop('projPop', false); });
+  $('openFile').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    f.text().then(t => { if (interp) stopRun(true); newProject(f.name.replace(/\.(kid|txt)$/i, ''), t); togglePop('projPop', false); });
+    e.target.value = '';
+  });
+  const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  let downloads = null;
+  if (inFrame) {
+    $('saveFile').hidden = true;
+    if (window.claude && window.claude.use) {
+      window.claude.use('downloads').then(d => { if (d) { downloads = d; $('saveFile').hidden = false; } }).catch(() => {});
+    }
+  }
+  $('saveFile').addEventListener('click', () => {
+    const filename = (current || 'program').replace(/[^\w\- ]+/g, '') + '.kid';
+    if (downloads) { downloads.save({ filename, data: code.value }).catch(() => {}); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([code.value], { type: 'text/plain' }));
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  // ------------------------------------------------ share codes
+  const b64 = {
+    enc(bytes) { let s = ''; bytes.forEach(b => { s += String.fromCharCode(b); }); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
+    dec(str) { const s = atob(str.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, c => c.charCodeAt(0)); }
+  };
+  async function squeeze(bytes, how) {
+    const st = new Blob([bytes]).stream().pipeThrough(how === 'in' ? new CompressionStream('deflate-raw') : new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(st).arrayBuffer());
+  }
+  async function encodeShare(name, src, extra) {
+    const raw = new TextEncoder().encode(JSON.stringify(Object.assign({ n: name, c: src }, extra || {})));
+    if (window.CompressionStream) { try { return 'KID1z' + b64.enc(await squeeze(raw, 'in')); } catch (e) { /* fall back */ } }
+    return 'KID1p' + b64.enc(raw);
+  }
+  async function decodeShare(text) {
+    const m = String(text).match(/KID1([zp])([A-Za-z0-9_-]+)/);
+    if (!m) return null;
+    let bytes = b64.dec(m[2]);
+    if (m[1] === 'z') bytes = await squeeze(bytes, 'out');
+    const obj = JSON.parse(new TextDecoder().decode(bytes));
+    return obj && typeof obj.c === 'string' ? obj : null;
+  }
+  let shareText = '';
+  async function makeShareCode() {
+    shareText = await encodeShare(current, code.value);
+    $('shareCode').value = shareText; $('copyMsg').textContent = '';
+  }
+  async function copy(text, msg) {
+    try { await navigator.clipboard.writeText(text); $('copyMsg').textContent = t(msg); }
+    catch (e) { $('shareCode').select(); $('copyMsg').textContent = t('Press Ctrl + C to copy.'); }
+  }
+  $('copyCode').addEventListener('click', () => copy(shareText, 'Copied!'));
+  $('copyLink').addEventListener('click', () => copy(location.href.split('#')[0] + '#' + shareText, 'Link copied. It opens when the playground is on a website.'));
+  async function openShared(text) {
+    try {
+      const obj = await decodeShare(text);
+      if (!obj) { $('openMsg').textContent = t('That doesn\'t look like a KidAI share code.'); return false; }
+      if (interp) stopRun(true);
+      if (obj.kind === 'challenge') {
+        const n = newProject(t('Challenge: ') + obj.ch.title, obj.c);
+        projects[n].challenge = obj.ch; save(); showChallenge();
+        outText('out-muted', t('Challenge opened. Read the task above the code, then press "Check my work".'));
+      } else if (obj.kind === 'handin') {
+        newProject(obj.who + ' - ' + obj.ch.title, obj.c);
+        outText('out-muted', t('Opened a hand-in. Use "Check students\' work" to mark several at once.'));
+      } else {
+        newProject('Remix of ' + (obj.n || 'a project'), obj.c);
+        outText('out-muted', tf('Opened "{0}" as your own copy. Change anything you like!', obj.n || 'a project'));
+      }
+      $('pasteCode').value = ''; $('openMsg').textContent = '';
+      togglePop('sharePop', false);
+      return true;
+    } catch (e) { $('openMsg').textContent = t('That share code seems broken. Ask your friend to copy it again.'); return false; }
+  }
+  $('openShared').addEventListener('click', () => openShared($('pasteCode').value));
+
+  code.addEventListener('input', () => { badLine = 0; sync(); save(); });
+  code.addEventListener('scroll', syncScroll);
+  code.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); return; }
+    if (e.key === 'F10') { e.preventDefault(); $('step').click(); return; }
+    if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault(); document.execCommand('insertText', false, '  '); return;
+    }
+    if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+      const s = code.selectionStart, v = code.value;
+      const start = v.lastIndexOf('\n', s - 1) + 1;
+      const cur = v.slice(start, s);
+      let indent = (cur.match(/^\s*/) || [''])[0];
+      const trimmed = cur.replace(/#.*$/, '').trim();
+      if (/:$/.test(trimmed)) indent += '  ';
+      e.preventDefault();
+      document.execCommand('insertText', false, '\n' + indent);
+    }
+  });
+
+  // ------------------------------------------------ word book
+  const CARDS = [
+    ['c-talk', 'Say something', 'Shows words, numbers or answers.', 'say "Hello!"\nsay 2 + 3'],
+    ['c-talk', 'Remember things', 'set makes a variable. change adds to a number.', 'set score to 0\nchange score by 10\nsay "Score: " + score'],
+    ['c-talk', 'Ask a question', 'Waits for an answer and keeps it. Numbers stay numbers.', 'ask "What is your name?" into name\nsay "Hi " + name'],
+    ['c-blk', 'Decide with if', 'Use is, is not, is bigger than, >, <, and, or, not.', 'set age to 9\nif age is bigger than 7:\n  say "Big kid!"\nelse if age is 7:\n  say "Seven!"\nelse:\n  say "Little one"\nend'],
+    ['c-blk', 'Repeat', 'Do the same thing again and again.', 'repeat 3 times:\n  say "Hip hip hooray!"\nend'],
+    ['c-blk', 'Repeat until', 'Keeps going until the question becomes yes.', 'set n to 1\nrepeat until n is 5:\n  say n\n  change n by 1\nend'],
+    ['c-blk', 'Repeat forever', 'Runs until you press Stop. stop jumps out of a loop.', 'repeat forever:\n  turn right 10\n  wait 0.05\nend'],
+    ['c-list', 'Lists', 'Lists start at item 1.', 'set pets to ["cat", "dog"]\nadd "fish" to pets\nsay item 1 of pets\nsay length of pets\nif pets contains "dog":\n  say "Woof!"\nend'],
+    ['c-list', 'For each', 'Does something with every item in a list.', 'for each pet in ["cat", "dog", "fish"]:\n  say "I love my " + pet\nend'],
+    ['c-list', 'Random', 'Pick a surprise number or item.', 'say random 1 to 6\nsay random item from ["rock", "paper", "scissors"]'],
+    ['c-blk', 'Recipes', 'Make your own instruction with define. give back sends an answer.', 'define add_up(a, b):\n  give back a + b\nend\nsay add_up(2, 5)'],
+    ['c-draw', 'Move Sparky', 'Sparky starts in the middle, facing up.', 'forward 100\nturn right 90\nforward 50\nback 25\nturn left 45'],
+    ['c-draw', 'Pen and colors', 'pen up moves without drawing.', 'color "hotpink"\npen size 8\ncircle 40\npen up\ngo to 0, -100\npen down\ncircle 20'],
+    ['c-draw', 'Start again', 'clear wipes the stage. go home goes back to the middle.', 'clear\ngo home'],
+    ['c-ai', 'Teach the AI', 'Give it examples for at least two labels.', 'teach "animal" with ["cat", "dog", "lion"]\nteach "food" with ["pizza", "rice", "mango"]'],
+    ['c-ai', 'Ask the AI to guess', 'how sure tells you how confident it is. It can be wrong!', 'teach "animal" with ["cat", "dog", "lion"]\nteach "food" with ["pizza", "rice", "mango"]\nsay guess "a big lion"\nsay how sure + "% sure"'],
+    ['c-talk', 'Wait', 'Pause for some seconds.', 'say "3"\nwait 1\nsay "2"\nwait 1\nsay "1... Go!"'],
+    ['c-talk', 'Buttons', 'Makes a button under the stage.', 'when clicked "Wave":\n  say "Hello there!"\nend'],
+    ['c-game', 'Sprites', 'Characters made from emoji or words. The stage edges are 200 steps from the middle.', 'make sprite "cat" as "🐱" at -100, 0 size 60\nmake sprite "fish" as "🐟" at 100, 0\nrepeat until "cat" touches "fish":\n  move sprite "cat" by 5, 0\n  wait 0.03\nend\nsay "Yum!"'],
+    ['c-game', 'More sprite tricks', 'Change a sprite\'s look, move it to a spot, hide it, or check the edge.', 'make sprite "hero" as "🙂"\nmake sprite "hero" as "😎"\nmove sprite "hero" to 0, 150\nsay y of sprite "hero"\nsay "hero" touches edge\nhide sprite "hero"\nshow sprite "hero"\ndelete sprite "hero"'],
+    ['c-game', 'Keyboard', 'Run a block when a key is pressed, or check if a key is held down.', 'when key "space" pressed:\n  play sound "jump"\nend\n\nrepeat forever:\n  if key "right" is pressed:\n    forward 5\n  end\n  wait 0.03\nend'],
+    ['c-game', 'Every', 'Runs a block on a timer until you press Stop.', 'every 1 second:\n  turn right 30\n  beep\nend'],
+    ['c-game', 'Sounds and notes', 'Notes are A to G, like "C", "F#" or "C5". Sounds: pop, coin, jump, boom, laser, win, lose.', 'play note "C" for 0.5 seconds\nplay note "E"\nplay note "G5"\nbeep\nplay sound "coin"'],
+    ['c-draw', 'Stage extras', 'Colour the stage, write words, and draw filled shapes.', 'background "lightblue"\ncolor "navy"\nwrite "Hello!"\ngo to 0, -80\ncolor "orange"\ndot 30\ngo to 0, 100\nrectangle 120, 40'],
+    ['c-draw', 'Where is Sparky?', 'x position, y position and direction tell you where Sparky is.', 'turn to 90\nforward 50\nsay x position\nsay y position\nsay direction'],
+    ['c-game', 'Stop everything', 'Ends the whole program, including buttons, keys and timers.', 'when clicked "Quit":\n  say "Bye!"\n  stop everything\nend'],
+    ["c-ai", "Test the AI", "Checks how many examples the AI gets right. how accurate gives the percent.", "teach \"yes\" with [\"yep\", \"sure\"]\nteach \"no\" with [\"nope\", \"never\"]\ntest \"yes\" with [\"sure thing\", \"yep yep\"]\nsay how accurate + \"%\""],
+    ["c-ai", "Picture AI", "Draw pictures (or use photos) and teach the AI to tell them apart.", "ask picture \"Draw a cat\" into cat1\nask picture \"Draw a fish\" into fish1\nteach \"cat\" with [cat1]\nteach \"fish\" with [fish1]\nask picture \"Draw one more\" into x\nsay guess x"],
+    ["c-ai", "Stage picture", "A picture of whatever Sparky has drawn, so code can make training pictures.", "circle 50\nset round to stage picture\nclear"],
+    ["c-ai", "Number AI", "learn finds a pattern in [input, answer] pairs. predict uses it.", "learn \"price\" from [[1, 10], [2, 20], [3, 30]]\nsay predict \"price\" for 7"],
+    ["c-ai", "Chat with a big AI", "Asks Claude on the internet. Check the answer!", "say chat \"Why is the sky blue?\""],
+    ["c-ai", "Save the AI", "Keep what the AI learned for next time, or make it forget.", "save ai as \"moods\"\nforget ai\nload ai \"moods\""],
+    ["c-list", "Records", "Keep named facts together.", "set pet to {name: \"Tom\", age: 3}\nsay pet.name\nset pet.age to 4\nsay keys of pet"],
+    ["c-list", "Text tools", "split, join, replace, starts with, ends with.", "say split \"a,b,c\" by \",\"\nsay join [\"a\", \"b\"] with \"-\"\nsay replace \"cat\" with \"dog\" in \"my cat\"\nsay \"hello\" starts with \"he\""],
+    ["c-list", "Save and load", "Things you save are still there next time.", "save 10 as \"best\"\nload \"best\" into best\nsay best"],
+    ["c-blk", "Use another project", "Borrow recipes from another project (or .kid file).", "use \"my helpers\"\n# now you can use the recipes from it"],
+  ];
+  const cards = $('cards');
+  function buildCards() {
+  cards.innerHTML = '';
+  CARDS.forEach(([cls, title, desc, snippet]) => {
+    const c = document.createElement('article'); c.className = 'card ' + cls;
+    const h = document.createElement('h3'); h.textContent = t(title);
+    const p = document.createElement('p'); p.textContent = t(desc);
+    const pre = document.createElement('pre'); pre.innerHTML = highlight(snippet);
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = t('Add to my code');
+    b.addEventListener('click', () => {
+      const v = code.value;
+      setCode((v.trim() ? v.replace(/\s*$/, '') + '\n\n' : '') + snippet + '\n');
+      code.focus();
+      code.selectionStart = code.selectionEnd = code.value.length;
+      code.scrollTop = code.scrollHeight;
+      sync();
+    });
+    c.append(h, p, pre, b);
+    cards.appendChild(c);
+  });
+  }
+  buildCards();
+
+  // ------------------------------------------------ stage
+  const drawC = $('draw'), botC = $('bot');
+  const dctx = drawC.getContext('2d'), bctx = botC.getContext('2d');
+  const S = 2; // canvas px per step (800px canvas for a 400-step stage)
+  const X = (x) => (x + 200) * S, Y = (y) => (200 - y) * S;
+  function clearStage() { dctx.clearRect(0, 0, 800, 800); }
+  const bgC = $('bg'), sprC = $('spr');
+  const bgctx = bgC.getContext('2d'), sctx = sprC.getContext('2d');
+  function setBackground(c) { bgctx.clearRect(0, 0, 800, 800); if (c) { bgctx.fillStyle = c; bgctx.fillRect(0, 0, 800, 800); } }
+  let spriteState = [], spriteFrame = 0;
+  function drawSprites(list) {
+    spriteState = list.map(sp => Object.assign({}, sp));
+    if (spriteFrame) return;
+    spriteFrame = requestAnimationFrame(() => {
+      spriteFrame = 0;
+      sctx.clearRect(0, 0, 800, 800);
+      sctx.textAlign = 'center'; sctx.textBaseline = 'middle';
+      for (const sp of spriteState) {
+        if (!sp.visible) continue;
+        const emoji = /\p{Extended_Pictographic}/u.test(sp.look);
+        const short = Array.from(sp.look).length <= 2;
+        const px = (short ? sp.size : sp.size * 0.42) * S;
+        sctx.font = emoji ? px + 'px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
+          : '800 ' + px + 'px "Baloo 2", "Trebuchet MS", sans-serif';
+        if (!emoji) {
+          sctx.lineWidth = px / 6; sctx.strokeStyle = '#17224a'; sctx.lineJoin = 'round';
+          sctx.strokeText(sp.look, X(sp.x), Y(sp.y)); sctx.fillStyle = '#ffffff';
+        } else sctx.fillStyle = '#17224a';
+        sctx.fillText(sp.look, X(sp.x), Y(sp.y));
+      }
+    });
+  }
+
+  // sound (made with the Web Audio API, nothing is downloaded)
+  let audio = null;
+  function audioCtx() {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+    } catch (e) { audio = null; }
+    return audio;
+  }
+  function tone(freq, secs, type, when, vol, slideTo) {
+    const a = audioCtx(); if (!a) return;
+    const t0 = a.currentTime + (when || 0);
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type || 'triangle'; o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + secs);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.25, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(0.05, secs));
+    o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + secs + 0.05);
+  }
+  function noise(secs, vol) {
+    const a = audioCtx(); if (!a) return;
+    const buf = a.createBuffer(1, Math.floor(a.sampleRate * secs), a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const src = a.createBufferSource(), g = a.createGain(); g.gain.value = vol || 0.3;
+    src.buffer = buf; src.connect(g); g.connect(a.destination); src.start();
+  }
+  const SFX = {
+    pop: () => tone(600, 0.08, 'sine', 0, 0.3, 200),
+    coin: () => { tone(988, 0.08, 'square', 0, 0.12); tone(1319, 0.25, 'square', 0.08, 0.12); },
+    jump: () => tone(300, 0.25, 'square', 0, 0.12, 900),
+    boom: () => { noise(0.6, 0.4); tone(120, 0.5, 'sine', 0, 0.4, 40); },
+    laser: () => tone(1400, 0.25, 'sawtooth', 0, 0.1, 200),
+    win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.12, 0.25)),
+    lose: () => [392, 330, 262].forEach((f, i) => tone(f, 0.3, 'triangle', i * 0.22, 0.25))
+  };
+
+  // keyboard for games
+  const keysDown = new Set();
+  const KEYNAMES = { ' ': 'space', arrowleft: 'left', arrowright: 'right', arrowup: 'up', arrowdown: 'down', enter: 'enter' };
+  function keyName(e) { const k = e.key.toLowerCase(); return KEYNAMES[k] || k; }
+  function typingInBox(e) { const t = e.target; return t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.tagName === 'SELECT'); }
+  document.addEventListener('keydown', (e) => {
+    if (!interp || !interp.keyEvents || typingInBox(e)) return;
+    const k = keyName(e);
+    if (['space', 'left', 'right', 'up', 'down'].includes(k)) e.preventDefault();
+    const fresh = !keysDown.has(k);
+    keysDown.add(k);
+    if (fresh) interp.pressKey(k);
+  });
+  document.addEventListener('keyup', (e) => keysDown.delete(keyName(e)));
+  window.addEventListener('blur', () => keysDown.clear());
+  const PAD_LABELS = { left: '◀', right: '▶', up: '▲', down: '▼', space: 'space' };
+  function showKeypad(keys) {
+    const box = $('keys'); box.innerHTML = '';
+    const list = keys.filter(k => k !== 'any');
+    for (const k of list) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = PAD_LABELS[k] || k; b.setAttribute('aria-label', k + ' key');
+      const press = (ev) => { ev.preventDefault(); b.classList.add('on'); if (!keysDown.has(k)) { keysDown.add(k); if (interp) interp.pressKey(k); } };
+      const release = () => { b.classList.remove('on'); keysDown.delete(k); };
+      b.addEventListener('pointerdown', press); b.addEventListener('pointerup', release); b.addEventListener('pointerleave', release);
+      box.appendChild(b);
+    }
+    $('keypad').hidden = false;
+  }
+  function usesKeys(src) { const m = src.match(/key\s+["\u201C']([^"\u201D']+)["\u201D']/gi) || []; return Array.from(new Set(m.map(x => x.replace(/key\s+["\u201C']|["\u201D']/gi, '').toLowerCase()).map(k => k === ' ' ? 'space' : k))); }
+  function drawBot(t) {
+    bctx.clearRect(0, 0, 800, 800);
+    if (!t.visible) return;
+    bctx.save();
+    bctx.translate(X(t.x), Y(t.y));
+    bctx.rotate(t.heading * Math.PI / 180);
+    bctx.beginPath();
+    bctx.moveTo(0, -22); bctx.lineTo(14, 14); bctx.lineTo(0, 7); bctx.lineTo(-14, 14); bctx.closePath();
+    bctx.fillStyle = '#ffb703'; bctx.fill();
+    bctx.lineWidth = 3; bctx.strokeStyle = '#17224a'; bctx.stroke();
+    bctx.beginPath(); bctx.arc(0, -4, 3.5, 0, Math.PI * 2); bctx.fillStyle = '#17224a'; bctx.fill();
+    bctx.restore();
+  }
+  const probe = new Option().style;
+  function isColor(c) {
+    if (window.CSS && CSS.supports) return CSS.supports('color', c);
+    probe.color = ''; probe.color = c; return probe.color !== '';
+  }
+
+  // ------------------------------------------------ output
+  const MAX_LINES = 600;
+  function addOut(el) {
+    out.appendChild(el);
+    while (out.childElementCount > MAX_LINES) out.removeChild(out.firstChild);
+    out.scrollTop = out.scrollHeight;
+  }
+  function outText(cls, text) { const d = document.createElement('div'); d.className = cls; d.textContent = text; addOut(d); return d; }
+  $('clearOut').addEventListener('click', () => { out.innerHTML = ''; });
+
+  let pendingAsk = null;
+  function askBox(q) {
+    return new Promise((resolve) => {
+      const id = 'ask-' + Date.now();
+      const box = document.createElement('form'); box.className = 'out-ask';
+      const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = q;
+      const inp = document.createElement('input'); inp.id = id; inp.autocomplete = 'off';
+      const ok = document.createElement('button'); ok.type = 'submit'; ok.textContent = t('OK');
+      box.append(lab, inp, ok);
+      addOut(box);
+      inp.focus({ preventScroll: true });
+      const finish = (val) => {
+        pendingAsk = null;
+        box.remove();
+        outText('out-muted', q);
+        outText('out-answer', val === null ? t('(stopped)') : (val || t('(no answer)')));
+        resolve(val);
+      };
+      box.addEventListener('submit', (e) => { e.preventDefault(); finish(inp.value); });
+      pendingAsk = () => finish(null);
+    });
+  }
+
+  function aiCard(g) {
+    const d = document.createElement('div'); d.className = 'out-ai';
+    const top = document.createElement('div'); top.className = 'ai-top';
+    const b = document.createElement('b'); b.textContent = t('AI guess: ') + g.label;
+    const s = document.createElement('span'); s.textContent = tf('{0}% sure', g.sure);
+    top.append(b, s);
+    const bars = document.createElement('div'); bars.className = 'bars';
+    g.scores.forEach(x => {
+      const n = document.createElement('span'); n.textContent = x.label;
+      const bar = document.createElement('span'); bar.className = 'bar';
+      const fill = document.createElement('i'); fill.style.width = x.sure + '%'; bar.appendChild(fill);
+      const p = document.createElement('span'); p.textContent = x.sure + '%';
+      bars.append(n, bar, p);
+    });
+    const why = document.createElement('p'); why.className = 'why';
+    why.textContent = tf('Guessed {0} using {1} examples you taught it. This tiny AI runs on this device and sent nothing to the internet. AI can be wrong, so check its answer!', g.picture ? t('your picture') : '"' + g.input + '"', g.examples);
+    d.append(top, bars, why);
+    if (g.reasons && g.reasons.length) {
+      const r = document.createElement('p'); r.className = 'reasons';
+      r.append(document.createTextNode(tf('Why? These words pushed it towards "{0}": ', g.label)));
+      g.reasons.forEach((x, i) => { const b = document.createElement('b'); b.textContent = x.word; r.append(b); if (i < g.reasons.length - 1) r.append(document.createTextNode(', ')); });
+      d.appendChild(r);
+    }
+    if (g.picture) {
+      const row = document.createElement('div'); row.className = 'pics';
+      if (g.pixels) { row.append(document.createTextNode(t('What the AI saw:')), picCanvas(g.pixels)); }
+      row.append(document.createTextNode(t('Most alike: ') + g.closest.map(c => c.label + ' (' + tf('{0}% alike', c.alike) + ')').join(', ')));
+      d.appendChild(row);
+    }
+    if (!g.knownWords.length) {
+      const w = document.createElement('p'); w.className = 'warn';
+      w.textContent = t('The AI has never seen any of these words, so this is just a guess. Teach it more examples!');
+      d.appendChild(w);
+    }
+    addOut(d);
+  }
+
+  // ---------- AI pack cards
+  function picCanvas(pixels) {
+    const c = document.createElement('canvas'); c.width = 16; c.height = 16;
+    const x = c.getContext('2d'), im = x.createImageData(16, 16);
+    for (let i = 0; i < 256; i++) { const v = 255 - Math.round((pixels[i] || 0) * 255); im.data[i * 4] = im.data[i * 4 + 1] = im.data[i * 4 + 2] = v; im.data[i * 4 + 3] = 255; }
+    x.putImageData(im, 0, 0); return c;
+  }
+  function testCard(r) {
+    const d = document.createElement('div'); d.className = 'out-test';
+    const b = document.createElement('b'); b.textContent = tf('AI test: {0} of {1} right ({2}%)', r.correct, r.total, r.percent);
+    const p = document.createElement('p'); p.style.margin = '2px 0 0'; p.textContent = tf('You tested the label "{0}". ', r.label) + t(r.wrong.length ? 'It got these wrong:' : 'It got them all right!');
+    d.append(b, p);
+    if (r.wrong.length) {
+      const ul = document.createElement('ul');
+      r.wrong.forEach(w => { const li = document.createElement('li'); li.textContent = tf('"{0}" was guessed as "{1}"', w.input, w.guessed); ul.appendChild(li); });
+      d.appendChild(ul);
+    }
+    addOut(d);
+  }
+  function predictCard(r) {
+    const d = document.createElement('div'); d.className = 'out-ai';
+    const top = document.createElement('div'); top.className = 'ai-top';
+    const b = document.createElement('b'); b.textContent = t('AI prediction: ') + r.output;
+    const sp = document.createElement('span'); sp.textContent = tf('{0}% sure', r.sure);
+    top.append(b, sp);
+    const c = document.createElement('canvas'); c.width = 520; c.height = 220; c.style.width = '100%'; c.style.maxWidth = '260px'; c.style.height = 'auto'; c.style.border = '1px solid #f3d6e6'; c.style.borderRadius = '8px'; c.style.background = '#fff';
+    c.setAttribute('role', 'img'); c.setAttribute('aria-label', 'Chart of the examples and the line the AI found');
+    const x = c.getContext('2d');
+    const xs = r.points.map(p => p[0]).concat([r.input]), ys = r.points.map(p => p[1]).concat([r.output]);
+    const x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    const PX = v => 30 + (v - x0) / ((x1 - x0) || 1) * 460, PY = v => 195 - (v - y0) / ((y1 - y0) || 1) * 170;
+    x.strokeStyle = '#d3dcec'; x.lineWidth = 2; x.beginPath(); x.moveTo(30, 10); x.lineTo(30, 195); x.lineTo(495, 195); x.stroke();
+    x.strokeStyle = '#d6338a'; x.lineWidth = 3; x.setLineDash([8, 6]); x.beginPath(); x.moveTo(PX(x0), PY(r.slope * x0 + r.intercept)); x.lineTo(PX(x1), PY(r.slope * x1 + r.intercept)); x.stroke(); x.setLineDash([]);
+    x.fillStyle = '#17224a'; r.points.forEach(p => { x.beginPath(); x.arc(PX(p[0]), PY(p[1]), 6, 0, 7); x.fill(); });
+    x.fillStyle = '#d6338a'; x.beginPath(); x.arc(PX(r.input), PY(r.output), 9, 0, 7); x.fill();
+    const why = document.createElement('p'); why.className = 'why';
+    why.textContent = tf('Dark dots are your {0} examples. The dashed line is the pattern the AI found: answer = {1} × input + {2}. The pink dot is its guess for {3}. Real life does not always follow a straight line!', r.points.length, Math.round(r.slope * 100) / 100, Math.round(r.intercept * 100) / 100, r.input);
+    d.append(top, c, why);
+    addOut(d);
+  }
+  function chatCard(q, text) {
+    const d = document.createElement('div'); d.className = 'out-chat';
+    const p = document.createElement('div'); p.className = 'out-say'; p.style.borderLeftColor = 'var(--sky)'; p.textContent = text;
+    const who = document.createElement('p'); who.className = 'who'; who.textContent = t('Answer from a cloud AI (Claude). Your question left this device. It can be wrong, so check it!');
+    d.append(p, who); addOut(d);
+  }
+  let sampler;
+  function getSampler() {
+    if (sampler === undefined) sampler = (window.claude && window.claude.use) ? window.claude.use('sample').catch(() => null) : Promise.resolve(null);
+    return sampler;
+  }
+  getSampler();
+  const CHAT_RULES = 'You are Sparky, a friendly helper in a coding app for children aged 8 to 14. Answer in 1 to 4 short, simple sentences. Be kind and accurate; if unsure, say so. Never ask for personal details. If a question is unsafe or for grown-ups only, gently suggest asking a trusted grown-up. The child asks: ';
+  async function chatHost(q) {
+    const s = await getSampler();
+    let url = ''; try { url = localStorage.getItem('kidai-chat-url') || ''; } catch (e) { url = ''; }
+    if (s) {
+      try {
+        const r = await s(CHAT_RULES + q.slice(0, 500), { modelTier: 'quick', cache: false });
+        chatCard(q, r.text); return r.text;
+      } catch (e) {
+        throw new KidAI.KidError(e && e.code === 'rate_limited' ? 'The cloud AI needs a short break. Try again in a minute.' : 'The cloud AI can\'t answer right now.', null, e && e.code === 'not_granted' ? 'chat needs permission to use Claude. Press Run and allow it.' : 'Try again later.');
+      }
+    }
+    if (url) {
+      const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: q }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new KidAI.KidError(j.error || 'The chat gateway said no.', null, 'Ask the grown-up who runs the gateway.');
+      chatCard(q, j.reply); return j.reply;
+    }
+    throw new KidAI.KidError('chat needs a connection to a cloud AI, and there isn\'t one here.', null, 'Ask a grown-up to set up the KidAI chat gateway (see the README), then add its address in the playground settings.');
+  }
+  let pendingPad = null;
+  function drawingPad(q) {
+    return new Promise((resolve) => {
+      const box = document.createElement('div'); box.className = 'pad';
+      const lab = document.createElement('b'); lab.textContent = q;
+      const c = document.createElement('canvas'); c.width = 400; c.height = 400; c.setAttribute('aria-label', 'Drawing pad. Draw with your mouse or finger.');
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 400, 400); x.lineCap = 'round'; x.lineJoin = 'round'; x.lineWidth = 22; x.strokeStyle = '#000';
+      let down = false, last = null;
+      const pos = (e) => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * 400 / r.width, (e.clientY - r.top) * 400 / r.height]; };
+      c.addEventListener('pointerdown', (e) => { down = true; last = pos(e); c.setPointerCapture(e.pointerId); x.beginPath(); x.arc(last[0], last[1], 11, 0, 7); x.fillStyle = '#000'; x.fill(); });
+      c.addEventListener('pointermove', (e) => { if (!down) return; const p = pos(e); x.beginPath(); x.moveTo(last[0], last[1]); x.lineTo(p[0], p[1]); x.stroke(); last = p; });
+      c.addEventListener('pointerup', () => { down = false; });
+      const row = document.createElement('div'); row.className = 'row';
+      const done = document.createElement('button'); done.type = 'button'; done.textContent = t('Done');
+      const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'ghost'; clear.textContent = t('Clear');
+      const fid = 'photo-' + Date.now();
+      const photoLab = document.createElement('label'); photoLab.className = 'mini'; photoLab.htmlFor = fid; photoLab.textContent = t('Use a photo instead');
+      const photo = document.createElement('input'); photo.type = 'file'; photo.accept = 'image/*'; photo.id = fid; photo.hidden = true;
+      row.append(done, clear, photoLab, photo);
+      box.append(lab, c, row);
+      addOut(box);
+      clear.addEventListener('click', () => { x.fillStyle = '#fff'; x.fillRect(0, 0, 400, 400); });
+      photo.addEventListener('change', () => {
+        const f = photo.files && photo.files[0]; if (!f) return;
+        const img = new Image();
+        img.onload = () => { x.fillStyle = '#fff'; x.fillRect(0, 0, 400, 400); const k = Math.min(400 / img.width, 400 / img.height); x.drawImage(img, (400 - img.width * k) / 2, (400 - img.height * k) / 2, img.width * k, img.height * k); URL.revokeObjectURL(img.src); };
+        img.src = URL.createObjectURL(f);
+      });
+      const finish = (ok) => {
+        pendingPad = null;
+        const small = document.createElement('canvas'); small.width = 32; small.height = 32;
+        const sx = small.getContext('2d'); sx.drawImage(c, 0, 0, 32, 32);
+        const px = sx.getImageData(0, 0, 32, 32).data, data = [];
+        for (let i = 0; i < 1024; i++) data.push(1 - (0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2]) / 255);
+        const thumb = c.toDataURL('image/png');
+        box.remove();
+        const shown = document.createElement('div'); shown.className = 'out-muted';
+        const im = document.createElement('img'); im.src = thumb; im.alt = 'Your picture'; im.width = 64; im.height = 64; im.style.border = '1px solid #d3dcec'; im.style.borderRadius = '6px';
+        shown.append(document.createTextNode(q + ' '), im); addOut(shown);
+        resolve(ok ? { size: 32, data, thumb } : null);
+      };
+      done.addEventListener('click', () => finish(true));
+      pendingPad = () => finish(false);
+    });
+  }
+
+  function showError(e) {
+    const d = document.createElement('div'); d.className = 'out-error'; d.setAttribute('role', 'alert');
+    const b = document.createElement('b'); b.textContent = e.kidLine ? t('Oops! Line ') + e.kidLine : t('Oops!');
+    const p = document.createElement('p'); p.textContent = e.message;
+    d.append(b, p);
+    if (e.hint) { const tp = document.createElement('p'); tp.className = 'tip'; const tb = document.createElement('b'); tb.textContent = t('Tip:') + ' '; tp.append(tb, document.createTextNode(e.hint)); d.appendChild(tp); }
+    addOut(d);
+    if (e.kidLine) {
+      badLine = e.kidLine; sync();
+      const top = (e.kidLine - 4) * 26;
+      code.scrollTop = Math.max(0, top); syncScroll();
+    }
+  }
+
+  // ------------------------------------------------ code / blocks / grown-up views
+  const BLOCKLY_URL = 'https://unpkg.com/blockly@12.5.1/';
+  let mode = 'code', blocklyReady = null, blocksSyncing = false, lineToBlock = new Map(), blockTimer = 0;
+  function loadScript(src) {
+    return new Promise((ok, fail) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = () => fail(new Error('load ' + src)); document.head.appendChild(el); });
+  }
+  function loadBlockly() {
+    if (!blocklyReady) {
+      blocklyReady = (window.Blockly ? Promise.resolve() : loadScript(BLOCKLY_URL + 'blockly_compressed.js'))
+        .then(() => loadScript(BLOCKLY_URL + 'msg/' + (uiLang() === 'hi' ? 'hi' : 'en') + '.js'))
+        .then(() => {
+          const ws = KidBlocks.mount($('blocklyDiv'), t);
+          ws.addChangeListener((ev) => {
+            if (blocksSyncing || ev.isUiEvent) return;
+            clearTimeout(blockTimer); blockTimer = setTimeout(blocksToCode, 250);
+          });
+        });
+      blocklyReady.catch(() => { blocklyReady = null; });
+    }
+    return blocklyReady;
+  }
+  function uiLang() { try { return localStorage.getItem('kidai-lang') || 'en'; } catch (e) { return 'en'; } }
+  function blocksMessage(text) { const m = $('blocksMsg'); m.textContent = text || ''; m.hidden = !text; }
+  function walkPair(a, b, ids) {
+    // a: statements from the blocks (with block ids), b: the same program re-read from text (with line numbers)
+    for (let i = 0; i < Math.min(a.length, b.length); i++) {
+      if (a[i]._bid) lineToBlock.set(b[i].line, a[i]._bid);
+      if (a[i].body && b[i].body) walkPair(a[i].body, b[i].body);
+      if (a[i].branches && b[i].branches) a[i].branches.forEach((br, j) => b[i].branches[j] && walkPair(br.body, b[i].branches[j].body));
+      if (a[i].otherwise && b[i].otherwise) walkPair(a[i].otherwise, b[i].otherwise);
+    }
+  }
+  function blocksToCode() {
+    const ws = KidBlocks.workspace(); if (!ws) return;
+    const json = Blockly.serialization.workspaces.save(ws);
+    const r = KidBlocks.jsonToProgram(json);
+    if (r.problems.length) { blocksMessage(r.problems[0]); return false; }
+    blocksMessage('');
+    const text = KidAI.printProgram(r.ast);
+    if (text !== code.value) { code.value = text; badLine = 0; sync(); save(); }
+    try { lineToBlock = new Map(); walkPair(r.ast.body.filter(x => x.type !== 'blank'), KidAI.parse(text, { keepComments: true }).body.filter(x => x.type !== 'blank')); } catch (e) { /* ignore */ }
+    return true;
+  }
+  function codeToBlocks() {
+    blocksSyncing = true;
+    try { KidBlocks.show(code.value); blocksMessage(''); }
+    finally { setTimeout(() => { blocksSyncing = false; blocksToCode(); }, 0); }
+  }
+  async function setMode(m) {
+    if (m === mode) return;
+    if (m === 'blocks') {
+      try { KidAI.parse(code.value); } catch (e) {
+        if (e instanceof KidAI.KidError) { showError(e); outText('out-muted', t('Fix the red line first, then switch to blocks.')); return; }
+      }
+      $('modeHint').textContent = t('Loading blocks…');
+      try { await loadBlockly(); } catch (e) { $('modeHint').textContent = t('Blocks need the internet the first time. Check your connection.'); return; }
+    }
+    if (mode === 'blocks' && blocksToCode() === false) { $('modeHint').textContent = t('Fix the block problem first.'); return; }
+    mode = m;
+    $('editorBox').hidden = m !== 'code'; $('blocksArea').hidden = m !== 'blocks'; $('coreView').hidden = m !== 'core';
+    for (const [id, v] of [['tabCode', 'code'], ['tabBlocks', 'blocks'], ['tabCore', 'core']]) $(id).setAttribute('aria-selected', String(v === m));
+    $('modeHint').textContent = t(m === 'core' ? 'For reading: this is how bigger languages write the same ideas.' : 'Blocks and code are the same program.');
+    if (m === 'blocks') { codeToBlocks(); Blockly.svgResize(KidBlocks.workspace()); }
+    if (m === 'core') { try { $('coreView').innerHTML = highlight(KidAI.toCore(code.value)); } catch (e) { $('coreView').textContent = t('Fix the errors in your code first.'); } }
+  }
+  $('tabCode').addEventListener('click', () => setMode('code'));
+  $('tabBlocks').addEventListener('click', () => setMode('blocks'));
+  $('tabCore').addEventListener('click', () => setMode('core'));
+
+  // ------------------------------------------------ memory panel and stepping
+  const mem = $('mem'), speedSel = $('speed');
+  let runMode = 'normal', stepWaiter = null, memTimer = 0, lastMem = new Map();
+  const SLOW_MS = { slow: 450, slower: 1100 };
+  function memRows(rows, prefix) {
+    return rows.map(r => {
+      const key = prefix + r.name, changed = lastMem.has(key) && lastMem.get(key) !== r.value;
+      return '<tr' + (changed ? ' class="changed"' : '') + '><td class="n">' + esc(r.name) + '</td><td class="v">' + esc(r.value.length > 300 ? r.value.slice(0, 300) + '…' : r.value) + '</td><td class="k">' + t(r.kind) + '</td></tr>';
+    }).join('');
+  }
+  function renderMemory(it) {
+    if (!it) return;
+    const snap = it.snapshot();
+    let html = '';
+    if (snap.globals.length) html += '<table><thead><tr><th>' + t('Name') + '</th><th>' + t('What is inside') + '</th><th>' + t('Kind') + '</th></tr></thead><tbody>' + memRows(snap.globals, 'g:') + '</tbody></table>';
+    else html += '<p class="empty">' + t('No variables yet. They appear here when your program uses ') + '<b>set</b>, <b>ask</b>' + t(' or for each.') + '</p>';
+    snap.frames.forEach((f, i) => {
+      html += '<div class="frame"><h5>' + t('Inside the recipe') + ' ' + esc(f.name) + '</h5>' + (f.vars.length ? '<table><tbody>' + memRows(f.vars, 'f' + i + ':') + '</tbody></table>' : '<p class="empty">' + t('No inputs') + '</p>') + '</div>';
+    });
+    const tt = it.turtle;
+    html += '<p class="empty">' + tf('Sparky is at {0}, {1} facing {2}.', Math.round(tt.x), Math.round(tt.y), Math.round(((tt.heading % 360) + 360) % 360)) + '</p>';
+    mem.innerHTML = html;
+    lastMem = new Map();
+    snap.globals.forEach(r => lastMem.set('g:' + r.name, r.value));
+    snap.frames.forEach((f, i) => f.vars.forEach(r => lastMem.set('f' + i + ':' + r.name, r.value)));
+  }
+  function showLine(n) {
+    curLine = n; sync();
+    if (mode === 'blocks' && KidBlocks.workspace()) { try { KidBlocks.workspace().highlightBlock(lineToBlock.get(n) || null); } catch (e) { /* ignore */ } }
+    $('lineInfo').textContent = t('Line') + ' ' + n;
+    const top = (n - 1) * 26;
+    if (top < code.scrollTop || top > code.scrollTop + code.clientHeight - 52) { code.scrollTop = Math.max(0, top - 104); syncScroll(); }
+  }
+  function beforeStep(line, it) {
+    if (runMode === 'normal') return null;
+    showLine(line); renderMemory(it);
+    if (runMode === 'step') {
+      setStatus('listening', 'Paused · press Step');
+      return new Promise(r => { stepWaiter = r; });
+    }
+    return new Promise(r => setTimeout(r, SLOW_MS[runMode] || 450));
+  }
+  function releaseStep() { if (stepWaiter) { const w = stepWaiter; stepWaiter = null; w(); } }
+  speedSel.addEventListener('change', () => { if (interp && !stepWaiter) runMode = speedSel.value; });
+  $('step').addEventListener('click', () => {
+    if (interp && stepWaiter) { runMode = 'step'; setStatus('running', 'Running…'); releaseStep(); return; }
+    if (interp) { runMode = 'step'; return; }
+    run('step');
+  });
+
+  // ------------------------------------------------ run / stop
+  let interp = null;
+  function setStatus(s, text) { statusEl.dataset.s = s; statusEl.textContent = t(text); }
+  function finishRun(state) {
+    stopBtn.disabled = state !== 'listening';
+    if (state === 'listening') setStatus('listening', 'Listening · press Stop to end');
+  }
+
+  async function run(mode) {
+    if (interp && stepWaiter && mode !== 'step') { runMode = speedSel.value; setStatus('running', 'Running…'); releaseStep(); return; }
+    if (interp) stopRun(true);
+    if (window.KidBlocks && typeof setMode === 'function' && document.getElementById('tabBlocks').getAttribute('aria-selected') === 'true' && blocksToCode() === false) {
+      outText('out-muted', t('Fix the block problem shown in the blocks area, then press Run.')); return;
+    }
+    runMode = mode === 'step' ? 'step' : speedSel.value;
+    badLine = 0; curLine = 0; sync();
+    lastMem = new Map(); mem.innerHTML = '<p class="empty">' + t('Starting…') + '</p>'; $('lineInfo').textContent = t('Line') + ' –';
+    out.innerHTML = '';
+    clearStage();
+    setBackground(null);
+    drawSprites([]);
+    keysDown.clear();
+    $('keypad').hidden = true;
+    $('buttons').innerHTML = '';
+    if (/\b(play|beep)\b/i.test(code.value)) audioCtx();
+    const gameKeys = usesKeys(code.value);
+    if (gameKeys.length) { showKeypad(gameKeys); $('stage').focus({ preventScroll: true }); }
+    setStatus('running', 'Running…');
+    stopBtn.disabled = false;
+    const me = new KidAI.Interpreter({
+      say: (t) => outText('out-say', t),
+      ask: (q) => askBox(q),
+      line: (x1, y1, x2, y2, color, size) => {
+        dctx.strokeStyle = color; dctx.lineWidth = size * S; dctx.lineCap = 'round';
+        dctx.beginPath(); dctx.moveTo(X(x1), Y(y1)); dctx.lineTo(X(x2), Y(y2)); dctx.stroke();
+      },
+      circle: (x, y, r, color, size, down) => {
+        dctx.beginPath(); dctx.arc(X(x), Y(y), r * S, 0, Math.PI * 2);
+        if (down) { dctx.strokeStyle = color; dctx.lineWidth = size * S; dctx.stroke(); }
+        else { dctx.fillStyle = color; dctx.fill(); }
+      },
+      clear: clearStage,
+      turtle: drawBot,
+      sprites: drawSprites,
+      background: setBackground,
+      write: (text, x, y, color, px) => {
+        dctx.save(); dctx.fillStyle = color; dctx.font = '700 ' + (px * S) + 'px "Atkinson Hyperlegible", sans-serif';
+        dctx.textAlign = 'center'; dctx.textBaseline = 'middle'; dctx.fillText(text, X(x), Y(y)); dctx.restore();
+      },
+      rect: (x, y, w, h, color) => { dctx.fillStyle = color; dctx.fillRect(X(x - w / 2), Y(y + h / 2), w * S, h * S); },
+      note: (freq, secs, name) => { tone(freq, secs, 'triangle', 0, 0.3); if (!audio) outText('out-note', '♪ ' + name); },
+      sound: (name) => { SFX[name](); if (!audio) outText('out-note', '♪ ' + name); },
+      isKeyDown: (k) => keysDown.has(k),
+      listenKeys: () => {},
+      stopped: () => { if (interp === me) { interp = null; stopBtn.disabled = true; setStatus('idle', 'Finished'); } },
+      checkColor: isColor,
+      moveDelay: () => ($('slow').checked ? 12 : 0),
+      ai: aiCard,
+      aiTest: testCard,
+      aiPredict: predictCard,
+      chat: chatHost,
+      askPicture: drawingPad,
+      storage: {
+        get: (k) => { try { return localStorage.getItem('kidai-saved:' + k); } catch (e) { return null; } },
+        set: (k, v) => { try { localStorage.setItem('kidai-saved:' + k, v); } catch (e) { throw new KidAI.KidError('This browser won\'t let me save things.', null, 'Try a different browser, or turn off private browsing.'); } }
+      },
+      readFile: (name) => { const k = Object.keys(projects).find(n => n.toLowerCase() === String(name).toLowerCase()); return k ? projects[k].code : null; },
+      taught: (label, n, total, pics, numbers) => outText('out-muted', numbers ? tf('The AI learned {0} number examples for "{1}".', n, label) : tf(pics ? 'The AI learned {0} pictures of "{1}".' : 'The AI learned {0} examples of "{1}".', n, label)),
+      button: (label, fire) => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+        b.addEventListener('click', () => { if (interp === me && !me.halted) fire(); });
+        $('buttons').appendChild(b);
+      },
+      error: (e) => { showError(e); setStatus('error', 'Needs a fix'); stopBtn.disabled = true; interp = null; endMemory(me); },
+      beforeStep
+    });
+    interp = me;
+    clearInterval(memTimer);
+    memTimer = setInterval(() => { if (interp === me && runMode === 'normal') renderMemory(me); }, 250);
+    const endMemory = (it) => { clearInterval(memTimer); renderMemory(it); describeStage(it); curLine = 0; sync(); $('lineInfo').textContent = t('Done'); };
+    try {
+      const r = await me.run(code.value);
+      if (interp !== me) return;
+      if (r.listening) { finishRun('listening'); curLine = 0; sync(); }
+      else { setStatus('idle', 'Finished'); stopBtn.disabled = true; interp = null; endMemory(me); }
+    } catch (e) {
+      if (interp !== me) return;
+      interp = null;
+      endMemory(me);
+      stopBtn.disabled = true;
+      if (e instanceof KidAI.Halted) { setStatus('idle', 'Stopped'); return; }
+      if (e instanceof KidAI.KidError) { showError(e); setStatus('error', 'Needs a fix'); return; }
+      showError({ message: 'Something unexpected went wrong inside KidAI: ' + (e && e.message), hint: 'This is not your fault. Try running again.' });
+      setStatus('error', 'Needs a fix');
+    }
+  }
+  function stopRun(quiet) {
+    if (!interp) return;
+    interp.halt();
+    releaseStep();
+    clearInterval(memTimer);
+    curLine = 0; sync();
+    if (pendingAsk) pendingAsk();
+    if (pendingPad) pendingPad();
+    interp = null;
+    stopBtn.disabled = true;
+    if (!quiet) { setStatus('idle', 'Stopped'); outText('out-muted', t('You stopped the program.')); }
+  }
+  runBtn.addEventListener('click', () => run());
+  stopBtn.addEventListener('click', () => stopRun(false));
+
+  // ------------------------------------------------ class challenges (no server needed)
+  async function runQuietly(src, answers) {
+    const said = [], ans = answers.slice();
+    const it = new KidAI.Interpreter({ say: (x) => said.push(String(x)), ask: async () => (ans.length ? ans.shift() : ''), storage: { get: () => null, set: () => {} } });
+    const timer = setTimeout(() => it.halt(), 3000);
+    let error = null;
+    try { await it.run(src); } catch (e) { error = e instanceof KidAI.Halted ? t('It took too long (more than 3 seconds).') : (e.kidLine ? t('Line') + ' ' + e.kidLine + ': ' : '') + e.message; }
+    clearTimeout(timer); it.halt();
+    return { said, error };
+  }
+  const norm = (lines) => lines.map(x => String(x).trim().toLowerCase().replace(/\s+/g, ' ')).join('\n');
+  async function checkAgainst(src, ch) {
+    const results = [];
+    for (const test of ch.tests) {
+      const r = await runQuietly(src, test.answers);
+      results.push({ answers: test.answers, want: test.expect, got: r.said, error: r.error, pass: !r.error && norm(r.said) === norm(test.expect) });
+    }
+    return results;
+  }
+  function parseTests(text) {
+    const lines = text.split('\n').map(x => x.trim()).filter((x, i, a) => x || a.length === 1);
+    return (lines.length ? lines : ['']).map(l => ({ answers: l ? l.split('|').map(x => x.trim()) : [] }));
+  }
+  $('makeChallenge').addEventListener('click', () => { togglePop('projPop', false); $('mkCode').value = ''; $('mkPreview').innerHTML = ''; $('dlgMake').showModal(); });
+  $('mkGo').addEventListener('click', async () => {
+    const tests = parseTests($('mkTests').value);
+    $('mkPreview').innerHTML = '';
+    for (const test of tests) {
+      const r = await runQuietly(code.value, test.answers);
+      if (r.error) { $('mkPreview').innerHTML = '<li>' + esc(t('Your program has a problem: ') + r.error) + '</li>'; return; }
+      test.expect = r.said;
+      const li = document.createElement('li');
+      li.textContent = (test.answers.length ? test.answers.join(' | ') : t('(no input)')) + ' → ' + (r.said.join(' / ') || t('(says nothing)'));
+      $('mkPreview').appendChild(li);
+    }
+    const ch = { title: $('mkTitle').value.trim() || 'Challenge', text: $('mkText').value.trim(), tests };
+    $('mkCode').value = await encodeShare(ch.title, $('mkStarter').value || '', { kind: 'challenge', ch });
+    $('mkMsg').textContent = '';
+  });
+  $('mkCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('mkCode').value); $('mkMsg').textContent = t('Copied!'); } catch (e) { $('mkCode').select(); $('mkMsg').textContent = t('Press Ctrl + C to copy.'); } });
+  function showChallenge() {
+    const ch = projects[current] && projects[current].challenge;
+    $('challengeBanner').hidden = !ch;
+    if (!ch) return;
+    $('chTitle').textContent = t('Challenge: ') + ch.title;
+    $('chText').textContent = ch.text;
+    $('chResults').innerHTML = ''; $('chScore').textContent = '';
+  }
+  $('chCheck').addEventListener('click', async () => {
+    const ch = projects[current].challenge;
+    $('chScore').textContent = t('Checking…');
+    const res = await checkAgainst(code.value, ch);
+    const ul = $('chResults'); ul.innerHTML = '';
+    res.forEach((r, i) => {
+      const li = document.createElement('li'); li.className = r.pass ? 'ok' : 'no';
+      li.textContent = (r.pass ? '✓ ' : '✗ ') + t('Test') + ' ' + (i + 1) + (r.answers.length ? ' (' + r.answers.join(' | ') + ')' : '') + ': ' +
+        (r.pass ? t('correct') : r.error ? r.error : tf('it should say "{0}" but your program says "{1}"', r.want.join(' / '), r.got.join(' / ')));
+      ul.appendChild(li);
+    });
+    const n = res.filter(r => r.pass).length;
+    $('chScore').textContent = tf('{0} of {1} tests pass', n, res.length) + (n === res.length ? ' 🎉' : '');
+    projects[current].lastScore = n + '/' + res.length; save();
+  });
+  $('chHand').addEventListener('click', () => { $('hdCode').value = ''; $('hdMsg').textContent = ''; $('dlgHand').showModal(); });
+  $('hdGo').addEventListener('click', async () => {
+    const ch = projects[current].challenge;
+    const res = await checkAgainst(code.value, ch);
+    $('hdCode').value = await encodeShare(current, code.value, { kind: 'handin', who: $('hdName').value.trim() || '?', ch, score: res.filter(r => r.pass).length + '/' + res.length, when: new Date().toISOString().slice(0, 16).replace('T', ' ') });
+  });
+  $('hdCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('hdCode').value); $('hdMsg').textContent = t('Copied!'); } catch (e) { $('hdCode').select(); $('hdMsg').textContent = t('Press Ctrl + C to copy.'); } });
+  $('markWork').addEventListener('click', () => { togglePop('projPop', false); $('dlgMark').showModal(); });
+  $('mkMark').addEventListener('click', async () => {
+    const body = $('mkTable'); body.innerHTML = '';
+    const codes = $('mkSubs').value.match(/KID1[zp][A-Za-z0-9_-]+/g) || [];
+    for (const c of codes) {
+      const tr = document.createElement('tr');
+      try {
+        const obj = await decodeShare(c);
+        if (!obj || obj.kind !== 'handin') { tr.innerHTML = '<td colspan="4">' + esc(t('This is not a hand-in code.')) + '</td>'; body.appendChild(tr); continue; }
+        const res = await checkAgainst(obj.c, obj.ch);
+        const n = res.filter(r => r.pass).length;
+        const cells = [obj.who, obj.ch.title, n + ' / ' + res.length];
+        cells.forEach(x => { const td = document.createElement('td'); td.textContent = x; tr.appendChild(td); });
+        const td = document.createElement('td'); const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-small ghost'; b.textContent = t('Open');
+        b.addEventListener('click', () => { newProject(obj.who + ' - ' + obj.ch.title, obj.c); $('dlgMark').close(); });
+        td.appendChild(b); tr.appendChild(td);
+      } catch (e) { tr.innerHTML = '<td colspan="4">' + esc(t('That share code seems broken. Ask your friend to copy it again.')) + '</td>'; }
+      body.appendChild(tr);
+    }
+    if (!codes.length) body.innerHTML = '<tr><td colspan="4">' + esc(t('No hand-in codes found.')) + '</td></tr>';
+  });
+
+  // ------------------------------------------------ settings
+  $('setBtn').addEventListener('click', (e) => { e.stopPropagation(); const pop = $('setPop'), on = pop.hidden; pop.hidden = !on; $('setBtn').setAttribute('aria-expanded', String(on)); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.settings-wrap')) { $('setPop').hidden = true; $('setBtn').setAttribute('aria-expanded', 'false'); } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('setPop').hidden = true; });
+  const pref = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
+  const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* not saved */ } };
+  $('langSel').value = LANG;
+  $('langSel').addEventListener('change', () => {
+    LANG = $('langSel').value; setPref('kidai-lang', LANG); translatePage(); buildCards();
+    if (window.Blockly && KidBlocks.workspace()) { try { KidBlocks.workspace().updateToolbox(KidBlocks.toolbox(t)); } catch (e) { /* ignore */ } }
+  });
+  $('bigText').checked = pref('kidai-big', '0') === '1';
+  document.body.classList.toggle('big', $('bigText').checked);
+  $('bigText').addEventListener('change', () => { document.body.classList.toggle('big', $('bigText').checked); setPref('kidai-big', $('bigText').checked ? '1' : '0'); sync(); });
+  const tb = $('typebar');
+  const typeMode = pref('kidai-typekeys', 'auto');
+  $('typeKeys').checked = typeMode === 'on' || (typeMode === 'auto' && window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  function applyTypeKeys() { tb.classList.toggle('on', $('typeKeys').checked); tb.classList.remove('auto'); }
+  applyTypeKeys();
+  $('typeKeys').addEventListener('change', () => { setPref('kidai-typekeys', $('typeKeys').checked ? 'on' : 'off'); applyTypeKeys(); });
+  tb.addEventListener('mousedown', (e) => e.preventDefault());
+  tb.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    code.focus();
+    document.execCommand('insertText', false, b.dataset.ins.replace(/\\n/g, '\n'));
+    const back = Number(b.dataset.back || 0);
+    if (back) code.selectionStart = code.selectionEnd = code.selectionStart - back;
+    sync(); save();
+  });
+  $('chatUrl').value = pref('kidai-chat-url', '');
+  $('saveChat').addEventListener('click', () => { setPref('kidai-chat-url', $('chatUrl').value.trim()); $('chatMsg').textContent = t('Saved.'); });
+
+  // A short description of the stage for screen readers
+  function describeStage(it) {
+    if (!it) return;
+    const sp = Array.from(it.sprites.values()).filter(x => x.visible).map(x => x.name + ' (' + x.look + ') at ' + Math.round(x.x) + ', ' + Math.round(x.y));
+    const ink = it.raster.filter(v => v > 0).length;
+    $('stage').setAttribute('aria-label', t("Sparky's stage") + '. ' + (ink ? 'Drawing covers about ' + Math.round(ink / 10.24) + '% of the stage. ' : 'Nothing drawn. ') +
+      (sp.length ? 'Sprites: ' + sp.join('; ') + '. ' : '') + 'Sparky is at ' + Math.round(it.turtle.x) + ', ' + Math.round(it.turtle.y) + '.');
+  }
+
+  // ------------------------------------------------ start
+  const sharedInLink = /KID1[zp][A-Za-z0-9_-]+/.test(location.hash) ? location.hash : null;
+  if (current && projects[current]) {
+    openProject(current); drawBot({ x: 0, y: 0, heading: 0, visible: true });
+    outText('out-muted', tf('Welcome back! "{0}" is where you left it. Press Run.', current));
+  } else { newProject('Welcome to KidAI', EXAMPLES['Welcome to KidAI']); run(); }
+  translatePage();
+  if (sharedInLink) openShared(sharedInLink).then(ok => { if (ok) { try { history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ } } });
+})();
+</script>
+</body>
+</html>
