@@ -1,0 +1,16 @@
+{
+  "say": { "prefix": "say", "body": ["say \"$1\""], "description": "Show something" },
+  "set": { "prefix": "set", "body": ["set ${1:score} to ${2:0}"], "description": "Make or change a variable" },
+  "ask": { "prefix": "ask", "body": ["ask \"${1:What is your name?}\" into ${2:name}"], "description": "Ask a question" },
+  "if": { "prefix": "if", "body": ["if ${1:score > 5}:", "  $2", "end"], "description": "Make a choice" },
+  "ifelse": { "prefix": "ifelse", "body": ["if ${1:score > 5}:", "  $2", "else:", "  $3", "end"], "description": "Choice with else" },
+  "repeat": { "prefix": "repeat", "body": ["repeat ${1:3} times:", "  $2", "end"], "description": "Repeat a number of times" },
+  "until": { "prefix": "until", "body": ["repeat until ${1:done}:", "  $2", "end"], "description": "Repeat until" },
+  "forever": { "prefix": "forever", "body": ["repeat forever:", "  $1", "  wait 0.05", "end"], "description": "Repeat forever" },
+  "foreach": { "prefix": "foreach", "body": ["for each ${1:thing} in ${2:things}:", "  $3", "end"], "description": "Do something for every item" },
+  "define": { "prefix": "define", "body": ["define ${1:my_recipe}(${2:input}):", "  $3", "end"], "description": "Make your own recipe" },
+  "when": { "prefix": "when", "body": ["when clicked \"${1:Jump}\":", "  $2", "end"], "description": "A button" },
+  "whenkey": { "prefix": "whenkey", "body": ["when key \"${1:space}\" pressed:", "  $2", "end"], "description": "A keyboard key" },
+  "sprite": { "prefix": "sprite", "body": ["make sprite \"${1:cat}\" as \"${2:🐱}\" at ${3:0}, ${4:0} size ${5:50}"], "description": "Make a sprite" },
+  "teach": { "prefix": "teach", "body": ["teach \"${1:happy}\" with [\"${2:yay}\", \"${3:so fun}\"]"], "description": "Teach the AI" }
+}

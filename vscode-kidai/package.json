@@ -1,0 +1,17 @@
+{
+  "name": "kidai-easy",
+  "displayName": "KidAI Easy",
+  "description": "Colours, tidy indentation and snippets for KidAI Easy (.kid) programs.",
+  "version": "1.2.0",
+  "publisher": "YOUR-NAME",
+  "license": "MIT",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Programming Languages", "Snippets"],
+  "keywords": ["kidai", "kids", "education", "beginner"],
+  "repository": { "type": "git", "url": "https://github.com/YOUR-NAME/kidai" },
+  "contributes": {
+    "languages": [{ "id": "kidai", "aliases": ["KidAI Easy", "kidai"], "extensions": [".kid"], "configuration": "./language-configuration.json" }],
+    "grammars": [{ "language": "kidai", "scopeName": "source.kidai", "path": "./syntaxes/kidai.tmLanguage.json" }],
+    "snippets": [{ "language": "kidai", "path": "./snippets/kidai.json" }]
+  }
+}

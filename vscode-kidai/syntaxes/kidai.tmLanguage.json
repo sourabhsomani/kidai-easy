@@ -1,0 +1,136 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "KidAI Easy",
+  "scopeName": "source.kidai",
+  "fileTypes": [
+    "kid"
+  ],
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#number"
+    },
+    {
+      "include": "#constant"
+    },
+    {
+      "include": "#blocks"
+    },
+    {
+      "include": "#talk"
+    },
+    {
+      "include": "#draw"
+    },
+    {
+      "include": "#games"
+    },
+    {
+      "include": "#ai"
+    },
+    {
+      "include": "#words"
+    },
+    {
+      "include": "#define"
+    },
+    {
+      "include": "#call"
+    },
+    {
+      "include": "#operator"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.number-sign.kidai",
+      "match": "#.*$"
+    },
+    "string": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.kidai",
+          "begin": "[\"“”]",
+          "end": "[\"“”]|$",
+          "patterns": [
+            {
+              "name": "constant.character.escape.kidai",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.kidai",
+          "begin": "['‘’]",
+          "end": "['‘’]|$",
+          "patterns": [
+            {
+              "name": "constant.character.escape.kidai",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "number": {
+      "name": "constant.numeric.kidai",
+      "match": "\\b\\d[\\d_]*(\\.\\d+)?\\b"
+    },
+    "blocks": {
+      "name": "keyword.control.kidai",
+      "match": "(?i)\\b(if|else|end|repeat|times?|while|until|forever|for|each|in|define|give|back|return|stop|skip|everything|when|clicked|pressed|every|seconds?|use)\\b"
+    },
+    "talk": {
+      "name": "support.function.kidai",
+      "match": "(?i)\\b(say|show|print|set|to|change|by|ask|into|add|remove|from|wait|save|load|as)\\b"
+    },
+    "draw": {
+      "name": "support.function.draw.kidai",
+      "match": "(?i)\\b(forward|back|backward|turn|left|right|pen|up|down|size|colou?r|circle|dot|rectangle|write|background|clear|go|home|hide|unhide|position|direction)\\b"
+    },
+    "games": {
+      "name": "support.function.games.kidai",
+      "match": "(?i)\\b(make|sprite|at|move|delete|touches|touching|edge|key|play|note|sound|beep)\\b"
+    },
+    "ai": {
+      "name": "entity.name.function.ai.kidai",
+      "match": "(?i)\\b(teach|with|guess|how|sure|accurate|test|learn|predict|chat|forget|ai|stage|picture)\\b"
+    },
+    "words": {
+      "name": "keyword.operator.word.kidai",
+      "match": "(?i)\\b(and|or|not|is|bigger|smaller|greater|less|than|contains|starts|ends|mod|random|item|of|length|split|join|replace|keys)\\b"
+    },
+    "define": {
+      "match": "(?i)\\b(define)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.kidai"
+        },
+        "2": {
+          "name": "entity.name.function.kidai"
+        }
+      }
+    },
+    "call": {
+      "match": "\\b([\\p{L}_][\\p{L}\\p{N}_]*)\\s*(?=\\()",
+      "captures": {
+        "1": {
+          "name": "entity.name.function.call.kidai"
+        }
+      }
+    },
+    "operator": {
+      "name": "keyword.operator.kidai",
+      "match": "[+\\-*/=<>!%:,.]"
+    },
+    "constant": {
+      "name": "constant.language.kidai",
+      "match": "(?i)\\b(yes|no|true|false|nothing)\\b"
+    }
+  }
+}
