@@ -4,6 +4,13 @@ A programming language for kids aged 8 and up. It reads like English and runs of
 
 **[Try the playground →](https://kidai-easy.vercel.app)**
 
+## Learn with the book
+
+| Language | Download |
+| --- | --- |
+| English | [Code with Sparky — KidAI Easy Guide (PDF)](docs/Code_with_Sparky_KidAI_Easy_Guide.pdf) |
+| हिन्दी | [Sparky के साथ Coding — KidAI Easy Hindi Guide (PDF)](docs/Sparky_ke_saath_coding_KidAI_Easy_Hindi.pdf) |
+
 ```kidai
 say "Hello! I am Sparky."
 ask "What is your name?" into name
@@ -64,7 +71,7 @@ For drawing, games, blocks and the picture AI, open the playground: `playground.
 | `gateway/server.js` | A safe chat gateway, so `chat` can use a cloud AI without kids ever seeing an API key. |
 | `vscode-kidai/` | VS Code extension: colours, indentation and snippets for `.kid` files (packaged `.vsix` included). |
 | `tests/` | `npm test`: 424 checks. |
-| `docs/` | The kids' guide in English and Hindi (PDF), and a copy of the playground for GitHub Pages. |
+| `docs/` | *Code with Sparky* (English PDF) and *Sparky के साथ Coding* (Hindi PDF) — the kids' guide — plus a copy of the playground for GitHub Pages. |
 | `SPEC.md` | The language rules: grammar, meaning of every statement, limits and the host interface. |
 
 ## The `kidai` command
