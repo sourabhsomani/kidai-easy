@@ -1,6 +1,6 @@
 {
   "name": "kidai-easy",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "KidAI Easy: a friendly programming language for kids, with a drawing robot and a tiny AI they teach themselves.",
   "main": "kidai.js",
   "bin": {
@@ -38,7 +38,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR-NAME/kidai.git"
+    "url": "git+https://github.com/sourabhsomani/kidai-easy.git"
   },
-  "homepage": "https://YOUR-NAME.github.io/kidai/"
+  "homepage": "https://github.com/sourabhsomani/kidai-easy#readme"
 }
