@@ -1,6 +1,8 @@
 # KidAI Easy
 
-A programming language for kids aged 8 and up, built from the KidAI PRD (KIDAI-PRD-001). It reads like English and runs offline. Kids can draw with a robot, make games, and teach their own AI with words, pictures and numbers.
+A programming language for kids aged 8 and up. It reads like English and runs offline. Kids can draw with a robot, make games, and teach their own AI with words, pictures and numbers.
+
+**[Try the playground →](https://kidai-easy.vercel.app)**
 
 ```kidai
 say "Hello! I am Sparky."
@@ -14,6 +16,25 @@ teach "happy" with ["I love this", "yay so fun"]
 teach "sad" with ["I feel bad", "this is awful"]
 say guess "today was so fun"
 say how sure + "% sure"
+```
+
+## VS Code Extension
+
+Install the extension for `.kid` file syntax highlighting, snippets and bracket matching.
+
+**From the VS Code Extensions tab (easiest):**
+
+1. Open VS Code
+2. Press `Ctrl+Shift+X` (or click the Extensions icon in the sidebar)
+3. Search for **KidAI Easy**
+4. Click **Install**
+
+Or install directly from the marketplace:
+[KidAI Easy — VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SourabhSomani.kidai-easy-extension)
+
+Or install from the command line:
+```bash
+code --install-extension SourabhSomani.kidai-easy-extension
 ```
 
 ## Install
@@ -103,6 +124,8 @@ For programs with sound or keys, press **▶ Start** in the window first (browse
 
 ## The playground
 
+Open the playground at **[https://kidai-easy.vercel.app](https://kidai-easy.vercel.app)** — no install needed, works in any browser.
+
 - **Run**, **Step** (one line at a time) and a speed menu; the running line glows.
 - **Sparky's memory** shows every variable, live.
 - **Code**, **Blocks** and **Grown-up code** tabs show the same program three ways.
@@ -162,7 +185,16 @@ GitHub Actions runs the tests on Node 18, 20 and 22 (`.github/workflows/test.yml
 
 ## Publish
 
-1. Replace `YOUR-NAME` in `package.json`, `LICENSE`, `kidai-cli.js` and `vscode-kidai/package.json`.
-2. Push to GitHub, then `npm login` and `npm publish`.
-3. Turn on GitHub Pages for the `docs/` folder so kids can use the playground at `https://YOUR-NAME.github.io/kidai/`.
-4. Optional: publish the VS Code extension with `vsce publish` from `vscode-kidai/`.
+| What | Where |
+| --- | --- |
+| npm package | [kidai-easy on npm](https://www.npmjs.com/package/kidai-easy) |
+| Playground | [kidai-easy.vercel.app](https://kidai-easy.vercel.app) |
+| VS Code extension | [SourabhSomani.kidai-easy-extension](https://marketplace.visualstudio.com/items?itemName=SourabhSomani.kidai-easy-extension) |
+| Source | [github.com/sourabhsomani/kidai-easy](https://github.com/sourabhsomani/kidai-easy) |
+
+To publish a new version:
+```bash
+npm version patch
+npm publish
+vercel --prod
+```
