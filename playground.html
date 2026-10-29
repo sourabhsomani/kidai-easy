@@ -127,6 +127,9 @@ main {
 /* right column */
 .right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .stage-box { padding: 12px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.stage-box[hidden] { display: none; }
+#toggleStage { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: #edf1f8; color: var(--ink-soft); cursor: pointer; white-space: nowrap; }
+#toggleStage:hover { background: #dce6fb; }
 .stage {
   position: relative; width: 100%; max-width: 400px; aspect-ratio: 1; border-radius: 12px; overflow: hidden;
   border: 1px solid var(--line);
@@ -407,8 +410,8 @@ end
 
   <div class="right">
     <section class="panel" aria-label="Drawing stage">
-      <div class="panel-head"><span>Sparky's stage</span><small>middle is 0, 0 · edges are 200 steps away</small></div>
-      <div class="stage-box">
+      <div class="panel-head"><span>Sparky's stage</span><button type="button" id="toggleStage" aria-expanded="true" aria-controls="stageBox">Hide</button></div>
+      <div class="stage-box" id="stageBox">
         <div class="stage" id="stage" tabindex="0" role="img" aria-label="Sparky's stage. Click here, then use your keyboard for games.">
           <canvas id="bg" width="800" height="800" aria-hidden="true"></canvas>
           <canvas id="draw" width="800" height="800" aria-hidden="true"></canvas>
@@ -5059,6 +5062,13 @@ say "Done!"
   function outText(cls, text) { const d = document.createElement('div'); d.className = cls; d.textContent = text; addOut(d); return d; }
   $('clearOut').addEventListener('click', () => { out.innerHTML = ''; });
 
+  const stageBox = $('stageBox'), toggleStage = $('toggleStage');
+  toggleStage.addEventListener('click', () => {
+    const hidden = stageBox.hasAttribute('hidden');
+    if (hidden) { stageBox.removeAttribute('hidden'); toggleStage.textContent = 'Hide'; toggleStage.setAttribute('aria-expanded', 'true'); }
+    else { stageBox.setAttribute('hidden', ''); toggleStage.textContent = 'Show'; toggleStage.setAttribute('aria-expanded', 'false'); }
+  });
+
   let pendingAsk = null;
   function askBox(q) {
     return new Promise((resolve) => {
@@ -5395,6 +5405,9 @@ say "Done!"
     $('keypad').hidden = true;
     $('buttons').innerHTML = '';
     if (/\b(play|beep)\b/i.test(code.value)) audioCtx();
+    if (/\b(forward|back|turn|circle|dot|rectangle|write|background|go to|go home|clear|color|pen|make sprite|move sprite|hide sprite|delete sprite|when clicked|stage picture|every \d)\b/i.test(code.value)) {
+      stageBox.removeAttribute('hidden'); toggleStage.textContent = 'Hide'; toggleStage.setAttribute('aria-expanded', 'true');
+    }
     const gameKeys = usesKeys(code.value);
     if (gameKeys.length) { showKeypad(gameKeys); $('stage').focus({ preventScroll: true }); }
     setStatus('running', 'Running…');
