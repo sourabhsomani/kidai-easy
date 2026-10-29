@@ -1,6 +1,6 @@
 {
   "name": "kidai-easy",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "KidAI Easy: a friendly programming language for kids, with a drawing robot and a tiny AI they teach themselves.",
   "main": "kidai.js",
   "bin": {
