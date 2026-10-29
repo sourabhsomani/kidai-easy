@@ -16,4 +16,3 @@ jobs:
       - run: KIDAI_SRC=1 node tests/run.js  # the src/ files directly
       - run: node kidai-cli.js test examples
       - run: node kidai-cli.js fmt examples/*.kid --check
-
