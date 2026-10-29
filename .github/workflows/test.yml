@@ -1,0 +1,19 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+      - run: git diff --exit-code kidai.js playground.html  # built files must match src/
+      - run: KIDAI_SRC=1 node tests/run.js  # the src/ files directly
+      - run: node kidai-cli.js test examples
+      - run: node kidai-cli.js fmt examples/*.kid --check
+
